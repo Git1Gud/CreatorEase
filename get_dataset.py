@@ -31,8 +31,8 @@ def download_videos_from_search(results_df):
 api_key = 'AIzaSyBHh9utQCeBEFW-W2m2n2SYAV5QMGRmwM8'
 youtube = build('youtube', 'v3', developerKey=api_key)
 
-query = "English podcast guest in English"
-max_results = 2000
+query = "business podcast"
+max_results = 5000
 videos_data = []
 
 def get_transcript_sentiment(video_id):
