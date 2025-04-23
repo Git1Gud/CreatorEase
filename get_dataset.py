@@ -31,7 +31,7 @@ def download_videos_from_search(results_df):
 api_key = 'AIzaSyBHh9utQCeBEFW-W2m2n2SYAV5QMGRmwM8'
 youtube = build('youtube', 'v3', developerKey=api_key)
 
-query = "business podcast"
+query = "sports podcast"
 max_results = 5000
 videos_data = []
 
