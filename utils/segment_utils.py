@@ -1,4 +1,4 @@
-def group_segments_two_speakers(words_with_timestamps):
+def group_segments_two_speakers(words_with_timestamps, min_duration=10.0, max_duration=40.0):
     segments = []
     if not words_with_timestamps:
         return segments
@@ -38,7 +38,62 @@ def group_segments_two_speakers(words_with_timestamps):
             "end": end,
             "speaker_change_idx": speaker_change_idx
         })
-    return segments
+
+    # Post-process: iteratively merge short segments
+    merged_segments = []
+    idx = 0
+    while idx < len(segments):
+        seg = segments[idx]
+        duration = seg["end"] - seg["start"]
+        # If segment is short and not the last, merge with next
+        while duration < min_duration and idx + 1 < len(segments):
+            next_seg = segments[idx + 1]
+            seg["words"] += next_seg["words"]
+            seg["speakers"] = list(dict.fromkeys(seg["speakers"] + next_seg["speakers"]))
+            seg["end"] = next_seg["end"]
+            duration = seg["end"] - seg["start"]
+            idx += 1  # Move to next for possible further merging
+        merged_segments.append(seg)
+        idx += 1
+
+    # If the last segment is still short and there is more than one segment, merge with previous
+    if len(merged_segments) >= 2 and (merged_segments[-1]["end"] - merged_segments[-1]["start"]) < min_duration:
+        merged_segments[-2]["words"] += merged_segments[-1]["words"]
+        merged_segments[-2]["speakers"] = list(dict.fromkeys(merged_segments[-2]["speakers"] + merged_segments[-1]["speakers"]))
+        merged_segments[-2]["end"] = merged_segments[-1]["end"]
+        merged_segments.pop(-1)
+
+    # Post-process: split segments longer than max_duration
+    final_segments = []
+    for seg in merged_segments:
+        duration = seg["end"] - seg["start"]
+        if duration <= max_duration:
+            final_segments.append(seg)
+        else:
+            # Split the segment into chunks of max_duration
+            words = seg["words"]
+            start_idx = 0
+            while start_idx < len(words):
+                chunk_words = []
+                chunk_start = words[start_idx]["start"]
+                chunk_end = chunk_start
+                for j in range(start_idx, len(words)):
+                    chunk_end = words[j]["end"]
+                    if chunk_end - chunk_start > max_duration and j > start_idx:
+                        break
+                    chunk_words.append(words[j])
+                # Prepare the chunk segment
+                chunk_speakers = list({w.get("speaker", "unknown") for w in chunk_words})
+                final_segments.append({
+                    "speakers": chunk_speakers,
+                    "words": chunk_words,
+                    "start": chunk_start,
+                    "end": chunk_end,
+                    "speaker_change_idx": None  # You can refine this if needed
+                })
+                start_idx += len(chunk_words)
+
+    return final_segments
 
 def print_speaker_segments(segments):
     for seg in segments:
