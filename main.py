@@ -6,6 +6,18 @@ import time
 import os
 import numpy as np
 from moviepy.editor import VideoFileClip
+import boto3
+
+def upload_to_s3(file_path, bucket_name, s3_key, aws_access_key_id=None, aws_secret_access_key=None, region_name=None):
+    s3 = boto3.client(
+        's3',
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
+        region_name=region_name
+    )
+    s3.upload_file(file_path, bucket_name, s3_key, ExtraArgs={'ACL': 'public-read'})
+    url = f"https://{bucket_name}.s3.amazonaws.com/{s3_key}"
+    return url
 
 def process_and_save_video_with_segments(
     video_path, output_dir, model_size="small", device=None, style="modern"
@@ -70,7 +82,13 @@ def process_and_save_video_with_segments(
         )
         # Add subtitles to the segment
         output_captioned_path = os.path.join(output_dir, f"segment{i+1}_with_captions.mp4")
-        add_dynamic_subtitles_to_video(segment_path, segment_words[i], output_captioned_path, style=style)
+        segment_words_with_timestamps=transcribe_audio_with_whisperx(
+            segment_path,
+            model_name=model_size,
+            device=device,
+            compute_type="float16" if device == "cuda" else "int8"
+        )
+        add_dynamic_subtitles_to_video(segment_path, segment_words_with_timestamps, output_captioned_path, style=style)
         print(f"Saved segment {i+1} to {segment_path} and captioned to {output_captioned_path}")
 
     original_clip.close()
