@@ -1,5 +1,5 @@
 from utils.transcription_utils import transcribe_audio_with_whisperx
-from utils.segment_utils import group_segments_two_speakers, format_speaker_segments
+from utils.segment_utils import group_segments_two_speakers, format_speaker_segments, format_speaker_segments_with_neighbors
 from utils.caption_utils import add_dynamic_subtitles_to_video
 from utils.predict import predict_rating_for_segments
 import time
@@ -30,7 +30,12 @@ def process_and_save_video_with_segments(
         compute_type="float16" if device == "cuda" else "int8"
     )
     segments = group_segments_two_speakers(words_with_timestamps)
-    formatted_segments = format_speaker_segments(segments)
+    formatted_segments = format_speaker_segments_with_neighbors(segments)
+    # Remove duplicates while preserving order
+    seen = set()
+    formatted_segments = [x for x in formatted_segments if not (x in seen or seen.add(x))]
+    
+    # print("Formatted Segments:", formatted_segments)
     ratings = predict_rating_for_segments(
         video_path, formatted_segments, model_path="random_forest_views_rating_model.pkl"
     )
@@ -80,14 +85,16 @@ def process_and_save_video_with_segments(
             remove_temp=True,
             threads=4
         )
-        # Add subtitles to the segment
+        # Adjust timestamps to be relative to segment start
+        segment_words_with_timestamps = [
+            {
+                **word,
+                "start": word["start"] - seg_start,
+                "end": word["end"] - seg_start
+            }
+            for word in segment_words[i]
+        ]
         output_captioned_path = os.path.join(output_dir, f"segment{i+1}_with_captions.mp4")
-        segment_words_with_timestamps=transcribe_audio_with_whisperx(
-            segment_path,
-            model_name=model_size,
-            device=device,
-            compute_type="float16" if device == "cuda" else "int8"
-        )
         add_dynamic_subtitles_to_video(segment_path, segment_words_with_timestamps, output_captioned_path, style=style)
         print(f"Saved segment {i+1} to {segment_path} and captioned to {output_captioned_path}")
 

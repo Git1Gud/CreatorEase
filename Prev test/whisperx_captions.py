@@ -412,8 +412,8 @@ def process_and_save_video_with_segments(
 
 
 if __name__ == "__main__":
-    video_path = os.path.join("uploads","test.mp4")
-    output_path = os.path.join("uploads","new_output_with_captions.mp4")
+    video_path = r"D:\Self\Gen ai\subtitle test\uploads\segment1.mp4"
+    output_path = r"D:\Self\Gen ai\subtitle test\uploads\test_output_segment.mp4"
     process_and_save_video_with_segments(
         video_path, output_path, model_size="small", device="cuda", style="modern"
     )

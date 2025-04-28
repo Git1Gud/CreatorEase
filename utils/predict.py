@@ -61,14 +61,14 @@ def predict_rating_for_segments(video_path, segments, model_path='random_forest_
     return ratings
 
 # Example usage:
-video_path = r"D:\Self\Gen ai\subtitle test\uploads\test.mp4"
-segments = [
-    "SPEAKER_00 & SPEAKER_01 (0.11-3.21): I'd love to start with these. || years of work right there.",
-    "SPEAKER_00 & SPEAKER_01 (3.35-7.90): Someone on your team call these the real-life Tony Stark glasses. || Very hard to make each one of these.",
-    "SPEAKER_00 & SPEAKER_01 (7.92-13.74): That makes me feel incredibly optimistic. || In a world where AI gets smarter and smarter, this is probably going to be the next major platform after phones.",
-    "SPEAKER_00 & SPEAKER_01 (13.90-16.68): I miss hugging my mom. || Yeah, haptics is hard.",
-    "SPEAKER_00 & SPEAKER_01 (16.90-21.95): How does generative AI change how social media feels? || We haven't found the end yet."
-]
-ratings = predict_rating_for_segments(video_path, segments)
-for seg, rating in zip(segments, ratings):
-    print(f"Segment: {seg}\nPredicted rating (1-100): {rating}\n")
+# video_path = r"D:\Self\Gen ai\subtitle test\uploads\test.mp4"
+# segments = [
+#     "SPEAKER_00 & SPEAKER_01 (0.11-3.21): I'd love to start with these. || years of work right there.",
+#     "SPEAKER_00 & SPEAKER_01 (3.35-7.90): Someone on your team call these the real-life Tony Stark glasses. || Very hard to make each one of these.",
+#     "SPEAKER_00 & SPEAKER_01 (7.92-13.74): That makes me feel incredibly optimistic. || In a world where AI gets smarter and smarter, this is probably going to be the next major platform after phones.",
+#     "SPEAKER_00 & SPEAKER_01 (13.90-16.68): I miss hugging my mom. || Yeah, haptics is hard.",
+#     "SPEAKER_00 & SPEAKER_01 (16.90-21.95): How does generative AI change how social media feels? || We haven't found the end yet."
+# ]
+# ratings = predict_rating_for_segments(video_path, segments)
+# for seg, rating in zip(segments, ratings):
+#     print(f"Segment: {seg}\nPredicted rating (1-100): {rating}\n")
