@@ -6,9 +6,12 @@ from sklearn.ensemble import RandomForestRegressor
 from sentence_transformers import SentenceTransformer
 import pickle
 import matplotlib.pyplot as plt
+import os
+from constants import qa_data_path, model_path, image_path
+
 
 # Load cleaned data
-df = pd.read_csv('youtube_shorts_podcast_dataset_with_qa.csv')
+df = pd.read_csv(qa_data_path)
 
 # Create transcript embeddings
 model = SentenceTransformer('all-MiniLM-L6-v2')
@@ -57,7 +60,8 @@ print(f"Test MSE: {mse:.2f}")
 print(f"Test R2 Score: {r2:.2f}")
 
 # Save the trained model to a pickle file
-with open('random_forest_views_rating_model.pkl', 'wb') as f:
+
+with open(model_path, 'wb') as f:
     pickle.dump(model, f)
 print("Model saved to random_forest_views_rating_model.pkl")
 
@@ -76,5 +80,6 @@ plt.barh(np.array(feature_names)[indices], importances[indices])
 plt.xlabel("Importance")
 plt.title(f"Top {top_n} Feature Importances")
 plt.tight_layout()
-plt.savefig("feature_importance.png")
+plt.savefig(image_path)
+plt.close()
 print("Feature importance plot saved as feature_importance.png")
