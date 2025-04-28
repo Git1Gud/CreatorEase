@@ -66,17 +66,20 @@ def process_and_save_video_with_segments(
                 segment_words[i].append(word)
                 break
 
-    # Prepare output directory
-    os.makedirs(output_dir, exist_ok=True)
+    # Prepare output directories
+    segments_dir = os.path.join(output_dir, "segments")
+    segment_output_dir = os.path.join(output_dir, "segment_output")
+    os.makedirs(segments_dir, exist_ok=True)
+    os.makedirs(segment_output_dir, exist_ok=True)
     original_clip = VideoFileClip(video_path)
 
     # Clip and subtitle each segment
     for i, (seg_start, seg_end) in enumerate(top_segment_times):
-        buffer = 0.0
+        buffer = 0.05
         clip_start = max(0, seg_start - buffer)
         clip_end = min(original_clip.duration, seg_end + buffer)
         segment_clip = original_clip.subclip(clip_start, clip_end)
-        segment_path = os.path.join(output_dir, f"segment{i+1}.mp4")
+        segment_path = os.path.join(segments_dir, f"segment{i+1}.mp4")
         segment_clip.write_videofile(
             segment_path,
             codec='libx264',
@@ -94,7 +97,7 @@ def process_and_save_video_with_segments(
             }
             for word in segment_words[i]
         ]
-        output_captioned_path = os.path.join(output_dir, f"segment{i+1}_with_captions.mp4")
+        output_captioned_path = os.path.join(segment_output_dir, f"segment{i+1}_with_captions.mp4")
         add_dynamic_subtitles_to_video(segment_path, segment_words_with_timestamps, output_captioned_path, style=style)
         print(f"Saved segment {i+1} to {segment_path} and captioned to {output_captioned_path}")
 
