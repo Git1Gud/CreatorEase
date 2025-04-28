@@ -37,7 +37,7 @@ def process_and_save_video_with_segments(
     
     # print("Formatted Segments:", formatted_segments)
     ratings = predict_rating_for_segments(
-        video_path, formatted_segments, model_path="random_forest_views_rating_model.pkl"
+        video_path, formatted_segments, model_path=os.path.join("models", "random_forest_views_rating_model.pkl"),
     )
     print("Ratings:", ratings)
 
