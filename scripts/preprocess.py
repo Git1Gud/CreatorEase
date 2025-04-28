@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import librosa
 import numpy as np
+from constants import qa_data_path
 
 def download_video(video_id, output_dir="downloads"):
     import yt_dlp
@@ -20,7 +21,7 @@ def download_video(video_id, output_dir="downloads"):
         ydl.download([url])
     return output_path
 
-df = pd.read_csv('youtube_shorts_podcast_dataset_with_qa.csv')
+df = pd.read_csv(qa_data_path)
 
 for col in ['question_text', 'answer_text']:
     if col in df.columns:
@@ -76,5 +77,5 @@ for idx, row in df.iterrows():
     except Exception as e:
         print(f"Error processing {video_id}: {e}")
 # Final save at the end
-df.to_csv('youtube_shorts_podcast_dataset_with_qa.csv', index=False)
+df.to_csv(qa_data_path, index=False)
 

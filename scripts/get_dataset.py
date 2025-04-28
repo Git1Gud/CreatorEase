@@ -5,6 +5,9 @@ from googleapiclient.discovery import build
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import TranscriptsDisabled, NoTranscriptFound
 from textblob import TextBlob
+from constants import base_data_path
+from dotenv import load_dotenv
+load_dotenv()
 
 def download_video(video_url, video_id, download_path="downloads/"):
     os.makedirs(download_path, exist_ok=True)
@@ -28,7 +31,7 @@ def download_videos_from_search(results_df):
         download_video(video_url,row['video_id'])
         print(f"Finished downloading: {row['title']}")
 
-api_key = 'AIzaSyBHh9utQCeBEFW-W2m2n2SYAV5QMGRmwM8'
+api_key = os.getenv("YOUTUBE_API_KEY")
 youtube = build('youtube', 'v3', developerKey=api_key)
 
 query = "sports podcast"
@@ -80,7 +83,7 @@ def get_video_stats(video_ids):
 
     return result
 
-dataset_path = "youtube_shorts_podcast_dataset.csv"
+dataset_path = base_data_path
 
 # Load existing video_ids if file exists
 existing_ids = set()

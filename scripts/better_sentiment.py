@@ -2,8 +2,8 @@
 
 from transformers import pipeline
 import pandas as pd
-
-df = pd.read_csv('youtube_shorts_podcast_dataset_with_qa.csv')
+from constants import qa_data_path
+df = pd.read_csv(qa_data_path)
 
 sentiment_pipeline = pipeline("sentiment-analysis", model="distilbert-base-uncased-finetuned-sst-2-english", device=0)  # device=0 for GPU
 
@@ -18,4 +18,4 @@ def convert_result(res):
     return res['score'] if res['label'] == 'POSITIVE' else -res['score']
 
 df['transcript_sentiment_better'] = [convert_result(r) for r in results]
-df.to_csv('youtube_shorts_podcast_dataset_with_qa.csv', index=False)
+df.to_csv(qa_data_path, index=False)
