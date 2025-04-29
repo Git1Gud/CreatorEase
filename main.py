@@ -9,8 +9,8 @@ if __name__ == "__main__":
     video_path = os.path.join(uploads_dir, "test.mp4")
     output_dir = uploads_dir
     start_time = time.time()
-    process_and_save_video_with_segments(
-        video_path, output_dir, model_size="small", device="cuda", style="modern"
-    )
+    print(process_and_save_video_with_segments(
+        video_path, output_dir, model_size="tiny", device="cuda", style="modern" 
+    ))
     end_time = time.time()
     print(f"Processing time: {end_time - start_time:.2f} seconds")

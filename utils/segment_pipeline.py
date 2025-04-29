@@ -2,6 +2,7 @@ from utils.transcription_utils import transcribe_audio_with_whisperx
 from utils.segment_utils import group_segments_two_speakers, format_speaker_segments_with_neighbors
 from utils.caption_utils import add_dynamic_subtitles_to_video
 from utils.predict import predict_rating_for_segments
+from utils.s3_utils import upload_to_s3
 import os
 import numpy as np
 from moviepy.editor import VideoFileClip
@@ -10,6 +11,8 @@ def process_and_save_video_with_segments(
     video_path, output_dir, model_size="small", device=None, style="modern"
 ):
     # Transcribe and segment
+
+    urls=[]
     words_with_timestamps = transcribe_audio_with_whisperx(
         video_path,
         model_name=model_size,
@@ -87,5 +90,7 @@ def process_and_save_video_with_segments(
         output_captioned_path = os.path.join(segment_output_dir, f"segment{i+1}_with_captions.mp4")
         add_dynamic_subtitles_to_video(segment_path, segment_words_with_timestamps, output_captioned_path, style=style)
         print(f"Saved segment {i+1} to {segment_path} and captioned to {output_captioned_path}")
+        urls.append(upload_to_s3(output_captioned_path,output_captioned_path.split("\\")[-1]))
 
     original_clip.close()
+    return urls

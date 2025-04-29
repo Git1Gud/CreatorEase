@@ -9,11 +9,11 @@ def check_gpu_availability():
     except ImportError:
         return "cpu"
 
-def transcribe_audio_with_whisperx(audio_file, model_name="small", device=None, compute_type="float16", batch_size=16):
+def transcribe_audio_with_whisperx(audio_file, model_name="tiny", device=None, compute_type="float16", batch_size=16):
     if device is None:
         device = check_gpu_availability()
     try:
-        print(f"Loading {model_name} model...")
+        print(f"Loading {model_name} model... with device {device} and compute type {compute_type}")
         model = whisperx.load_model(model_name, device, compute_type=compute_type)
         audio = whisperx.load_audio(audio_file)
         print("Transcribing with Whisper...")
