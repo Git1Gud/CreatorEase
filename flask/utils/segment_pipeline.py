@@ -3,6 +3,8 @@ from utils.segment_utils import group_segments_two_speakers, format_speaker_segm
 from utils.caption_utils import add_dynamic_subtitles_to_video
 from utils.predict import predict_rating_for_segments
 from utils.s3_utils import upload_to_s3
+from utils.llm import EngagementQuestionGenerator
+from utils.audio_generate import get_narration
 import os
 import numpy as np
 from moviepy.editor import VideoFileClip
@@ -11,7 +13,7 @@ def process_and_save_video_with_segments(
     video_path, output_dir, model_size="small", device=None, style="modern"
 ):
     # Transcribe and segment
-
+    generator = EngagementQuestionGenerator(api_key=os.getenv("GROQ_API_KEY"))
     urls=[]
     words_with_timestamps = transcribe_audio_with_whisperx(
         video_path,
@@ -24,14 +26,14 @@ def process_and_save_video_with_segments(
     # Remove duplicates while preserving order
     seen = set()
     formatted_segments = [x for x in formatted_segments if not (x in seen or seen.add(x))]
-    
+    # print(formatted_segments)
     ratings = predict_rating_for_segments(
         video_path, formatted_segments, model_path=os.path.join("models", "random_forest_views_rating_model.pkl"),
     )
     print("Ratings:", ratings)
 
     # Get top 3 segments based on ratings
-    top_indices = np.argsort(ratings)[-3:][::-1]
+    top_indices = np.argsort(ratings)[-1:][::-1]
     top_segments = [formatted_segments[i] for i in top_indices]
     top_ratings = [ratings[i] for i in top_indices]
     print("Top 3 Segments:")
@@ -77,6 +79,7 @@ def process_and_save_video_with_segments(
             remove_temp=True,
             threads=4
         )
+        
         print(f"Words in segment {i+1}: {[w['word'] for w in segment_words[i]]}")
         # Adjust timestamps to be relative to segment start
         segment_words_with_timestamps = [
@@ -90,7 +93,14 @@ def process_and_save_video_with_segments(
         output_captioned_path = os.path.join(segment_output_dir, f"segment{i+1}_with_captions.mp4")
         add_dynamic_subtitles_to_video(segment_path, segment_words_with_timestamps, output_captioned_path, style=style)
         print(f"Saved segment {i+1} to {segment_path} and captioned to {output_captioned_path}")
-        urls.append(upload_to_s3(output_captioned_path,output_captioned_path.split("\\")[-1]))
+
+
+        hook = generator.generate_question(top_segments[i], formatted_segments)
+        print(f"Generated Hook: {hook}")
+        audio_path=get_narration(hook)
+        print(f"Generated Audio Path: {audio_path}")
+
+        # urls.append(upload_to_s3(output_captioned_path,output_captioned_path.split("\\")[-1]))
 
     original_clip.close()
     return urls
