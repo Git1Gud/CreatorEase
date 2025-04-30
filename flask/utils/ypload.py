@@ -18,7 +18,7 @@ def upload_to_s3(file_path, bucket_name, s3_key, aws_access_key_id=None, aws_sec
 bucket_name = os.getenv("AWS_S3_BUCKET_NAME")
 aws_access_key_id = os.getenv('AWS_S3_ACCESS_KEY')
 aws_secret_access_key = os.getenv('AWS_S3_SECRET_ACCESS_KEY')
-region_name = os.getenv('ASW_S3_REGION_NAME')
+region_name = os.getenv('AWS_S3_REGION_NAME')
 
 url=upload_to_s3(
     file_path=r"C:\Users\Admin\Desktop\CreatorEase\uploads\segments\segment2.mp4",
