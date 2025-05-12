@@ -7,7 +7,7 @@ from utils.llm import EngagementQuestionGenerator
 from utils.audio_generate import get_narration
 import os
 import numpy as np
-from moviepy.editor import VideoFileClip
+from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip, concatenate_videoclips, concatenate_audioclips
 
 def process_and_save_video_with_segments(
     video_path, output_dir, model_size="small", device=None, style="modern"
@@ -33,7 +33,7 @@ def process_and_save_video_with_segments(
     print("Ratings:", ratings)
 
     # Get top 3 segments based on ratings
-    top_indices = np.argsort(ratings)[-1:][::-1]
+    top_indices = np.argsort(ratings)[-3:][::-1]
     top_segments = [formatted_segments[i] for i in top_indices]
     top_ratings = [ratings[i] for i in top_indices]
     print("Top 3 Segments:")
@@ -100,7 +100,39 @@ def process_and_save_video_with_segments(
         audio_path=get_narration(hook)
         print(f"Generated Audio Path: {audio_path}")
 
-        # urls.append(upload_to_s3(output_captioned_path,output_captioned_path.split("\\")[-1]))
+        # Load the audio clip
+        audio_clip = AudioFileClip(audio_path)
+
+        # Load the video clip
+        video_clip = VideoFileClip(output_captioned_path)
+
+        # Extend the video duration to fit the audio at the end
+        # 1. Create a blank (black) video with the same size as the segment, duration = audio_clip.duration
+        from moviepy.editor import ColorClip
+
+        blank_video = ColorClip(
+            size=video_clip.size,
+            color=(0, 0, 0),
+            duration=audio_clip.duration
+        ).set_fps(video_clip.fps)
+
+        # 2. Set the audio of the blank video to the generated audio
+        blank_video = blank_video.set_audio(audio_clip)
+
+        # 3. Concatenate the original video (with its audio) and the blank video (with the generated audio)
+        final_video = concatenate_videoclips([video_clip, blank_video])
+
+        # Write the final video
+        final_output_path = os.path.join(segment_output_dir, f"segment{i+1}_final.mp4")
+        final_video.write_videofile(final_output_path, codec='libx264', audio_codec='aac')
+        print(f"Saved final segment {i+1} to {final_output_path}")
+
+        video_clip.close()
+        audio_clip.close()
+        blank_video.close()
+        final_video.close()
+
+        urls.append(upload_to_s3(final_output_path,final_output_path.split("\\")[-1]))
 
     original_clip.close()
     return urls

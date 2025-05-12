@@ -65,15 +65,18 @@ export default function VideoClipper() {
         method: "POST",
         body: formData,
       });
+      // const response=await fetch("http://localhost:5000/health")
 
       setProgress(70)
 
       if (!response.ok) {
         throw new Error(`Server responded with status: ${response.status}`)
       }
-
+      const data=await response.json()
+      console.log("Server response:", data);
+      
       // For demo purposes, we'll use a hardcoded video URL
-      console.log("Video processed successfully",response)
+      // console.log("Video processed successfully",response)
       const videoUrl = "https://zaidcre.s3.us-east-1.amazonaws.com/Screen+Recording+2025-04-23+235956.mp4"
 
       // Store the original video and generated clips in localStorage
@@ -82,11 +85,11 @@ export default function VideoClipper() {
       }
 
       // Store the clip URLs (using the same URL for all clips in this demo)
-      localStorage.setItem("clip1", videoUrl)
-      localStorage.setItem("clip2", videoUrl)
-      localStorage.setItem("clip3", videoUrl)
+      localStorage.setItem("clip1", data[0] || 'https://zaidcre.s3.us-east-1.amazonaws.com/segment1_final.mp4')
+      localStorage.setItem("clip2", data[1] || 'https://zaidcre.s3.us-east-1.amazonaws.com/segment2_final.mp4')
+      localStorage.setItem("clip3", data[2]  || 'https://zaidcre.s3.us-east-1.amazonaws.com/segment3_final.mp4')
 
-      setProgress(100)
+      setProgress(100)  
 
       // Navigate to results page
       router.push("/results")

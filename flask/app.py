@@ -5,7 +5,7 @@ import os
 import time
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app) # Enable CORS for all origins
 
 # Directory to store uploaded files
 UPLOAD_FOLDER = "uploads"
@@ -40,6 +40,10 @@ def process_video():
         "processing_time": f"{end_time - start_time:.2f} seconds",
         "urls": urls
     })
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({"status": "zaidgey"})
 
 if __name__ == "__main__":
     app.run(debug=True)
