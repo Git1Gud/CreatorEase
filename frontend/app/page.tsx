@@ -167,7 +167,7 @@ export default function VideoClipper() {
                   src={preview}
                   controls
                   className="w-full h-full"
-                  poster="/placeholder.svg?height=720&width=1280"
+                  // poster="/placeholder.svg?height=720&width=1280"
                 />
               </div>
             ) : (

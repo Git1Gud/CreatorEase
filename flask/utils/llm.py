@@ -6,25 +6,42 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+class ContentReviewAgent:
+    """
+    Review agent that uses an LLM to check if content is appropriate, reliable, and relevant.
+    """
+    def __init__(self, api_key: str):
+        self.llm = ChatGroq(api_key=api_key, model="llama3-8b-8192", temperature=0.0)
+
+    def review(self, generated: str, segment: str, context: str) -> str:
+        review_prompt = PromptTemplate(
+            input_variables=["generated", "segment", "context"],
+            template=(
+                "You are a content moderation and fact-checking assistant.\n"
+                "Given the following:\n"
+                "Generated Hook: {generated}\n"
+                "Current Segment: {segment}\n"
+                "Full Context: {context}\n\n"
+                "1. Is the generated hook appropriate (not offensive, hateful, or explicit)?\n"
+                "2. Is the hook reliable and relevant to the segment and context?\n"
+                "Respond with 'APPROVED' if both are true, otherwise respond with 'REJECTED' and a short reason."
+            )
+        )
+        formatted_prompt = review_prompt.format(
+            generated=generated,
+            segment=segment,
+            context=context
+        )
+        messages = [HumanMessage(content=formatted_prompt)]
+        review_result = self.llm.invoke(messages)
+        return review_result.content.strip()
+
 class EngagementQuestionGenerator:
     def __init__(self, api_key: str):
-        """
-        Initialize the EngagementQuestionGenerator with an OpenAI API key.
-        """
         self.llm = ChatGroq(api_key=api_key, model="llama3-8b-8192", temperature=0.7)
+        self.reviewer = ContentReviewAgent(api_key=api_key)
 
     def generate_question(self, segment_text: str, complete_segment: list) -> str:
-        """
-        Generate an engaging question based on the provided segment text.
-
-        Args:
-            segment_text (str): The text of the current segment.
-            complete_segment (list): A list of all segments for context.
-
-        Returns:
-            str: A question designed to increase engagement.
-        """
-        # Join the complete_segment list into a single string for the prompt
         complete_segment_text = "\n".join(complete_segment)
 
         prompt = PromptTemplate(
@@ -48,18 +65,21 @@ class EngagementQuestionGenerator:
             )
         )
 
-        # Format the prompt with the segment text and complete context
         formatted_prompt = prompt.format(
             segment_text=segment_text,
             complete_segment=complete_segment_text
         )
 
-        # Pass the formatted prompt as a HumanMessage
         messages = [HumanMessage(content=formatted_prompt)]
-
-        # Generate the question using the LLM
         question = self.llm.invoke(messages)
-        return question.content
+        generated = question.content
+
+        # Review the generated question using another LLM call
+        review_result = self.reviewer.review(generated, segment_text, complete_segment_text)
+        if review_result.startswith("APPROVED"):
+            return generated
+        else:
+            return f"Review failed: {review_result}"
 
 # # Example usage
 # if __name__ == "__main__":

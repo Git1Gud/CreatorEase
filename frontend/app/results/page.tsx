@@ -93,7 +93,7 @@ export default function ResultsPage() {
                   src={originalVideo}
                   controls
                   className="w-full h-full"
-                  poster="/placeholder.svg?height=720&width=1280"
+                  // poster="/placeholder.svg?height=720&width=1280"
                 />
               </div>
             ) : (
@@ -117,7 +117,7 @@ export default function ResultsPage() {
                       src={clip.url}
                       className="w-full h-full"
                       controls
-                      poster="/placeholder.svg?height=720&width=1280"
+                      // poster="/placeholder.svg?height=720&width=1280"
                     />
                   </div>
                   <div className="flex items-center justify-between">

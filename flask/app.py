@@ -29,7 +29,7 @@ def process_video():
     start_time = time.time()
     try:
         urls = process_and_save_video_with_segments(
-            video_path, output_dir, model_size="tiny", device="cuda", style="modern"
+            video_path, output_dir, model_size="small", device="cuda", style="modern"
         )
     except Exception as e:
         return jsonify({"error": f"Video processing failed: {str(e)}"}), 500
