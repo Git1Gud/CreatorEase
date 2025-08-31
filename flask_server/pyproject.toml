@@ -1,0 +1,21 @@
+[tool.uv]
+index-url = "https://pypi.org/simple/"
+
+[project]
+name = "flask_server"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "boto3>=1.40.21",
+    "dotenv>=0.9.9",
+    "elevenlabs>=2.13.0",
+    "flask-cors",
+    "langchain>=0.3.27",
+    "langchain-groq>=0.3.7",
+    "moviepy>=2.2.1",
+    "opencv-python>=4.12.0.88",
+    "pip>=25.2",
+    "whisperx>=3.4.2",
+]
