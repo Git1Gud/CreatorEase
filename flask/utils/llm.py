@@ -79,7 +79,9 @@ class EngagementQuestionGenerator:
         if review_result.startswith("APPROVED"):
             return generated
         else:
-            return f"Review failed: {review_result}"
+            print('hook: ',generated)
+            print(f"Review failed: {review_result}")
+            return ""
 
 # # Example usage
 # if __name__ == "__main__":

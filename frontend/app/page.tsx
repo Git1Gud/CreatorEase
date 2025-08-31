@@ -81,7 +81,7 @@ export default function VideoClipper() {
 
       // Store the original video and generated clips in localStorage
       if (preview) {
-        localStorage.setItem("originalVideo", preview)
+        localStorage.setItem("originalVideo", "https://zaidcre.s3.us-east-1.amazonaws.com/segment2.mp4")
       }
 
       // Store the clip URLs (using the same URL for all clips in this demo)

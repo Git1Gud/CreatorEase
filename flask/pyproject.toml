@@ -1,0 +1,16 @@
+[tool.uv]
+index-url = "https://pypi.org/simple/"
+
+[project]
+name = "flask"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "boto3>=1.40.21",
+    "dotenv>=0.9.9",
+    "langchain>=0.3.27",
+    "langchain-groq>=0.3.7",
+    "pip>=25.2",
+]
