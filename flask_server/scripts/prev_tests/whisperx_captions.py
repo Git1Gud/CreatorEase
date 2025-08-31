@@ -9,7 +9,7 @@ import gc
 import whisperx
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
-from moviepy.editor import VideoFileClip
+from moviepy import VideoFileClip
 from dotenv import load_dotenv
 
 load_dotenv()

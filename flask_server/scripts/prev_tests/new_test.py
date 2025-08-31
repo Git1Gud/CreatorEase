@@ -7,7 +7,7 @@ import colorsys
 import platform
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
-from moviepy.editor import VideoFileClip, AudioFileClip
+from moviepy import VideoFileClip, AudioFileClip
 from faster_whisper import WhisperModel
 import gc
 

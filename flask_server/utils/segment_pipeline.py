@@ -7,7 +7,7 @@ from utils.llm import EngagementQuestionGenerator
 from utils.audio_generate import get_narration
 import os
 import numpy as np
-from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip, concatenate_videoclips, concatenate_audioclips
+from moviepy import VideoFileClip, AudioFileClip, CompositeAudioClip, concatenate_videoclips, concatenate_audioclips
 
 def process_and_save_video_with_segments(
     video_path, output_dir, model_size="small", device=None, style="modern"
@@ -108,7 +108,7 @@ def process_and_save_video_with_segments(
 
         # Extend the video duration to fit the audio at the end
         # 1. Create a blank (black) video with the same size as the segment, duration = audio_clip.duration
-        from moviepy.editor import ColorClip
+        from moviepy import ColorClip
 
         blank_video = ColorClip(
             size=video_clip.size,

@@ -2,9 +2,9 @@ import os
 import time
 import numpy as np
 import cv2
-import moviepy.editor as mp
+import moviepy as mp
 from PIL import Image, ImageDraw, ImageFont
-from moviepy.editor import VideoFileClip, AudioFileClip
+from moviepy import VideoFileClip, AudioFileClip
 import gc
 import random
 import colorsys
@@ -13,7 +13,7 @@ from pathlib import Path
 from faster_whisper import WhisperModel
 import numpy as np
 import cv2
-from moviepy.editor import VideoFileClip, AudioFileClip
+from moviepy import VideoFileClip, AudioFileClip
 from PIL import Image, ImageDraw, ImageFont
 from pathlib import Path
 from faster_whisper import WhisperModel
