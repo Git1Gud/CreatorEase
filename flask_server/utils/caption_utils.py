@@ -3,7 +3,7 @@ import numpy as np
 import cv2
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
-from moviepy import VideoFileClip
+from moviepy.editor import VideoFileClip 
 
 def generate_vibrant_colors(num_colors=5):
     import random, colorsys

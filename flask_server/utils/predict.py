@@ -3,6 +3,7 @@ import numpy as np
 import pickle
 from sentence_transformers import SentenceTransformer
 from transformers import pipeline
+from librosa.feature.rhythm import tempo
 
 def extract_audio_features(audio_path):
     y, sr = librosa.load(audio_path, sr=None)
@@ -12,7 +13,7 @@ def extract_audio_features(audio_path):
     features['zcr'] = np.mean(librosa.feature.zero_crossing_rate(y))
     features['spectral_centroid'] = np.mean(librosa.feature.spectral_centroid(y=y, sr=sr))
     features['spectral_bandwidth'] = np.mean(librosa.feature.spectral_bandwidth(y=y, sr=sr))
-    features['tempo'] = librosa.beat.tempo(y=y, sr=sr)[0]
+    features['tempo'] = tempo(y=y, sr=sr)[0]
     return np.array([
         features['duration'],
         features['rms'],

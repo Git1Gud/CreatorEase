@@ -3,6 +3,7 @@ import gc
 import os
 from dotenv import load_dotenv
 load_dotenv()
+from whisperx.diarize import DiarizationPipeline
 
 device = "cuda" 
 audio_file = r"D:\Self\Gen ai\subtitle test\Shortened video.mp4"
@@ -33,7 +34,7 @@ print(result["segments"]) # after alignment
 # import gc; gc.collect(); torch.cuda.empty_cache(); del model_a
 
 # 3. Assign speaker labels
-diarize_model = whisperx.DiarizationPipeline(use_auth_token=os.getenv('HUGGINGFACE_TOKEN'), device=device)
+diarize_model = DiarizationPipeline(use_auth_token=os.getenv('HUGGINGFACE_TOKEN'), device=device)
 
 # add min/max number of speakers if known
 diarize_segments = diarize_model(audio)

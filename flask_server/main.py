@@ -2,6 +2,10 @@ from utils.s3_utils import upload_to_s3
 from utils.segment_pipeline import process_and_save_video_with_segments
 import time
 import os
+import torch
+
+torch.backends.cuda.matmul.allow_tf32 = True
+torch.backends.cudnn.allow_tf32 = True
 
 if __name__ == "__main__":
     uploads_dir = "uploads"

@@ -31,7 +31,7 @@ def transcribe_audio_with_whisperx(audio_file, model_name="tiny", device=None, c
         try:
             if os.getenv('HUGGINGFACE_TOKEN'):
                 print("Identifying speakers...")
-                diarize_model = whisperx.DiarizationPipeline(use_auth_token=os.getenv('HUGGINGFACE_TOKEN'), device=device)
+                diarize_model = whisperx.diarize.DiarizationPipeline(use_auth_token=os.getenv('HUGGINGFACE_TOKEN'), device=device)
                 diarize_segments = diarize_model(audio)
                 result = whisperx.assign_word_speakers(diarize_segments, result)
         except Exception as e:

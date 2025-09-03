@@ -1,6 +1,6 @@
 from langchain.prompts import PromptTemplate
 from langchain.schema import HumanMessage
-from langchain_groq import ChatGroq
+from langchain_google_genai import ChatGoogleGenerativeAI
 import os
 from dotenv import load_dotenv
 
@@ -11,7 +11,7 @@ class ContentReviewAgent:
     Review agent that uses an LLM to check if content is appropriate, reliable, and relevant.
     """
     def __init__(self, api_key: str):
-        self.llm = ChatGroq(api_key=api_key, model="llama3-8b-8192", temperature=0.0)
+        self.llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", google_api_key=api_key, temperature=0.0)
 
     def review(self, generated: str, segment: str, context: str) -> str:
         review_prompt = PromptTemplate(
@@ -38,7 +38,7 @@ class ContentReviewAgent:
 
 class EngagementQuestionGenerator:
     def __init__(self, api_key: str):
-        self.llm = ChatGroq(api_key=api_key, model="llama3-8b-8192", temperature=0.7)
+        self.llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", google_api_key=api_key, temperature=0.7)
         self.reviewer = ContentReviewAgent(api_key=api_key)
 
     def generate_question(self, segment_text: str, complete_segment: list) -> str:
@@ -85,7 +85,9 @@ class EngagementQuestionGenerator:
 
 # # Example usage
 # if __name__ == "__main__":
-#     generator = EngagementQuestionGenerator(api_key=os.getenv("GROQ_API_KEY"))
+#     key = os.getenv("GEMINI_API_KEY")
+#     print("Key loaded:", bool(key))
+#     generator = EngagementQuestionGenerator(api_key=key)
 
 #     # Current segment text
 #     segment_text = (

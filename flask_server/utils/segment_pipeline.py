@@ -7,13 +7,14 @@ from utils.llm import EngagementQuestionGenerator
 from utils.audio_generate import get_narration
 import os
 import numpy as np
-from moviepy import VideoFileClip, AudioFileClip, CompositeAudioClip, concatenate_videoclips, concatenate_audioclips
+from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip, concatenate_videoclips, concatenate_audioclips
 
 def process_and_save_video_with_segments(
     video_path, output_dir, model_size="small", device=None, style="modern"
 ):
     # Transcribe and segment
-    generator = EngagementQuestionGenerator(api_key=os.getenv("GROQ_API_KEY"))
+    print(os.getenv('GEMINI_API_KEY'))
+    generator = EngagementQuestionGenerator(api_key=os.getenv("GEMINI_API_KEY"))
     urls=[]
     words_with_timestamps = transcribe_audio_with_whisperx(
         video_path,

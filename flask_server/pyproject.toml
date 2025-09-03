@@ -1,26 +1,45 @@
-[tool.uv]
-index-url = "https://pypi.org/simple/"
-
 [project]
-name = "flask_server"
+name = "flask-server"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10.14"
 dependencies = [
-    "boto3>=1.40.21",
+    "boto3>=1.40.22",
     "dotenv>=0.9.9",
     "elevenlabs>=2.13.0",
-    "flask>=3.1.2",
-    "flask-cors",
-    "google-api-python-client>=2.179.0",
+    "google-api-python-client>=2.181.0",
     "langchain>=0.3.27",
     "langchain-groq>=0.3.7",
     "librosa>=0.11.0",
-    "moviepy>=2.2.1",
-    "opencv-python>=4.12.0.88",
-    "pip>=25.2",
+    "numpy>=2.2.6",
+    "opencv-python>=4.11.0.86",
     "psutil>=7.0.0",
+    "requests>=2.32.5",
+    "scikit-learn==1.6.1", # matches your pickled models
+    "sentence-transformers>=5.1.0",
     "textblob>=0.19.0",
+    "torch==2.5.1",
+    "torchvision==0.20.1",
+    "torchaudio==2.5.1",
     "whisperx>=3.4.2",
+    "youtube-transcript-api>=1.2.2",
+    "yt-dlp>=2025.8.27",
+    "ctranslate2==4.4.0",
+    "soundfile>=0.12.1",
+    "moviepy==1.0.3",
+    "langchain-google-genai>=2.1.10",
 ]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu121" }
+torchvision = { index = "pytorch-cu121" }
+torchaudio = { index = "pytorch-cu121" }
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+
+[[tool.uv.index]]
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
