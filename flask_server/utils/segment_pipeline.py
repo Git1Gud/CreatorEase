@@ -13,7 +13,6 @@ def process_and_save_video_with_segments(
     video_path, output_dir, model_size="small", device=None, style="modern"
 ):
     # Transcribe and segment
-    print(os.getenv('GEMINI_API_KEY'))
     generator = EngagementQuestionGenerator(api_key=os.getenv("GEMINI_API_KEY"))
     urls=[]
     words_with_timestamps = transcribe_audio_with_whisperx(
@@ -109,7 +108,7 @@ def process_and_save_video_with_segments(
 
         # Extend the video duration to fit the audio at the end
         # 1. Create a blank (black) video with the same size as the segment, duration = audio_clip.duration
-        from moviepy import ColorClip
+        from moviepy.editor import ColorClip
 
         blank_video = ColorClip(
             size=video_clip.size,
@@ -121,6 +120,7 @@ def process_and_save_video_with_segments(
         blank_video = blank_video.set_audio(audio_clip)
 
         # 3. Concatenate the original video (with its audio) and the blank video (with the generated audio)
+        
         final_video = concatenate_videoclips([video_clip, blank_video])
 
         # Write the final video
@@ -133,7 +133,7 @@ def process_and_save_video_with_segments(
         blank_video.close()
         final_video.close()
 
-        urls.append(upload_to_s3(final_output_path,final_output_path.split("\\")[-1]))
+        # urls.append(upload_to_s3(final_output_path,final_output_path.split("\\")[-1]))
 
     original_clip.close()
     return urls

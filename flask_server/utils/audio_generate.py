@@ -1,43 +1,43 @@
 from dotenv import load_dotenv
-from elevenlabs.client import ElevenLabs
-from elevenlabs import play
 import os
-import requests
-import shutil  # Import the shutil module
+import shutil
+from kokoro import KPipeline
+import soundfile as sf
+import torch
 
 load_dotenv()
 
 def get_narration(text):
     """
-    Obtain narration audio for the given text using Eleven Labs API.
+    Obtain narration audio for the given text using Kokoro TTS model.
     """
-    # Check both possible environment variable names
-    api_key = os.environ.get("ELEVEN_LAB_API_KEY") or os.environ.get("ELEVENLABS_API_KEY")
-    if not api_key:
-        raise Exception("Please set the ELEVEN_LAB_API_KEY environment variable.")
+    print(text)
+    # Load Hugging Face token if needed (optional for public models)
+    hf_token = os.environ.get("HUGGINGFACE_TOKEN")
     
-    voice_id = "21m00Tcm4TlvDq8ikWAM"  # Your Eleven Labs voice ID
+    # Initialize Kokoro pipeline for American English
+    pipeline = KPipeline(repo_id='hexgrad/Kokoro-82M',lang_code='a')  # 'a' for American English
     
-    # Note the updated URL format with voice_id in the path
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+    # Generate audio
+    generator = pipeline(
+        text, voice='af_heart',  # Default voice; change as needed
+        speed=1, split_pattern=r'\n+'
+    )
     
-    headers = {
-        "xi-api-key": api_key,
-        "Content-Type": "application/json"
-    }
+    # Collect all audio segments
+    all_audio = []
+    for gs, ps, audio in generator:
+        all_audio.append(audio)
     
-    payload = {
-        "text": text,
-        "model_id": "eleven_monolingual_v1"  # Adding the model ID which is often required
-    }
+    # Concatenate if multiple segments
+    if all_audio:
+        final_audio = torch.cat(all_audio, dim=0).numpy() if len(all_audio) > 1 else all_audio[0]
+    else:
+        raise Exception("No audio generated.")
     
-    response = requests.post(url, json=payload, headers=headers)
-    if response.status_code != 200:
-        raise Exception(f"Error from Eleven Labs API: {response.text}")
-
-    temp_audio_file = f"temp_{abs(hash(text))}.mp3"
-    with open(temp_audio_file, "wb") as f:
-        f.write(response.content)
+    # Save to temporary WAV file
+    temp_audio_file = f"temp_{abs(hash(text))}.wav"
+    sf.write(temp_audio_file, final_audio, 24000)
     
     # Define the destination directory
     upload_dir = "uploads/audio"
@@ -54,5 +54,6 @@ def get_narration(text):
         
     return destination_path
 
+# Example usage (uncomment to test)
 # audio_path = get_narration("Hello, this is a test narration.")
 # print(f"Audio saved to: {audio_path}")

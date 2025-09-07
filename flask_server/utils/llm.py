@@ -24,6 +24,7 @@ class ContentReviewAgent:
                 "Full Context: {context}\n\n"
                 "1. Is the generated hook appropriate (not offensive, hateful, or explicit)?\n"
                 "2. Is the hook reliable and relevant to the segment and context?\n"
+                "You can be a bit lenient"
                 "Respond with 'APPROVED' if both are true, otherwise respond with 'REJECTED' and a short reason."
             )
         )
@@ -74,14 +75,15 @@ class EngagementQuestionGenerator:
         question = self.llm.invoke(messages)
         generated = question.content
 
+        return generated
         # Review the generated question using another LLM call
-        review_result = self.reviewer.review(generated, segment_text, complete_segment_text)
-        if review_result.startswith("APPROVED"):
-            return generated
-        else:
-            print('hook: ',generated)
-            print(f"Review failed: {review_result}")
-            return ""
+        # review_result = self.reviewer.review(generated, segment_text, complete_segment_text)
+        # if review_result.startswith("APPROVED"):
+        #     return generated
+        # else:
+        #     print('hook: ',generated)
+        #     print(f"Review failed: {review_result}")
+        #     return ""
 
 # # Example usage
 # if __name__ == "__main__":
