@@ -94,44 +94,52 @@ def process_and_save_video_with_segments(
         add_dynamic_subtitles_to_video(segment_path, segment_words_with_timestamps, output_captioned_path, style=style)
         print(f"Saved segment {i+1} to {segment_path} and captioned to {output_captioned_path}")
 
-
+        # Generate a hook, TTS it, and create a captioned blank video to append
         hook = generator.generate_question(top_segments[i], formatted_segments)
         print(f"Generated Hook: {hook}")
-        audio_path=get_narration(hook)
+        audio_path, hook_words = get_narration(hook)
         print(f"Generated Audio Path: {audio_path}")
 
-        # Load the audio clip
+        # Load the audio clip and the captioned segment video
         audio_clip = AudioFileClip(audio_path)
-
-        # Load the video clip
         video_clip = VideoFileClip(output_captioned_path)
 
-        # Extend the video duration to fit the audio at the end
-        # 1. Create a blank (black) video with the same size as the segment, duration = audio_clip.duration
+        # Create a blank (black) video same size/fps as segment with hook audio
         from moviepy.editor import ColorClip
-
         blank_video = ColorClip(
             size=video_clip.size,
             color=(0, 0, 0),
             duration=audio_clip.duration
         ).set_fps(video_clip.fps)
-
-        # 2. Set the audio of the blank video to the generated audio
         blank_video = blank_video.set_audio(audio_clip)
 
-        # 3. Concatenate the original video (with its audio) and the blank video (with the generated audio)
-        
-        final_video = concatenate_videoclips([video_clip, blank_video])
+        # Write blank video, add dynamic captions, then load it back
+        temp_blank_path = os.path.join(segment_output_dir, f"segment{i+1}_hook_blank.mp4")
+        blank_video.write_videofile(temp_blank_path, codec='libx264', audio_codec='aac', remove_temp=True, threads=4)
+        subtitled_blank_path = os.path.join(segment_output_dir, f"segment{i+1}_hook_with_captions.mp4")
+        add_dynamic_subtitles_to_video(temp_blank_path, hook_words, subtitled_blank_path, style=style)
+        subtitled_blank_clip = VideoFileClip(subtitled_blank_path)
+
+        # Concatenate the original captioned segment and the captioned hook
+        final_video = concatenate_videoclips([video_clip, subtitled_blank_clip])
 
         # Write the final video
         final_output_path = os.path.join(segment_output_dir, f"segment{i+1}_final.mp4")
         final_video.write_videofile(final_output_path, codec='libx264', audio_codec='aac')
         print(f"Saved final segment {i+1} to {final_output_path}")
 
+        # Cleanup resources
         video_clip.close()
         audio_clip.close()
         blank_video.close()
+        subtitled_blank_clip.close()
         final_video.close()
+
+        # Cleanup temporary hook files
+        if os.path.exists(temp_blank_path):
+            os.remove(temp_blank_path)
+        if os.path.exists(subtitled_blank_path):
+            os.remove(subtitled_blank_path)
 
         # urls.append(upload_to_s3(final_output_path,final_output_path.split("\\")[-1]))
 
