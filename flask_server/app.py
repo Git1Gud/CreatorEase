@@ -3,8 +3,10 @@ from flask_cors import CORS  # Import Flask-CORS
 from utils.segment_pipeline import process_and_save_video_with_segments
 from utils.caption_utils import add_dynamic_subtitles_to_video
 from utils.transcription_utils import transcribe_audio_with_whisperx
+from utils.multicam import combine_multicam_with_slide
 import os
 import time
+import json
 
 app = Flask(__name__)
 CORS(app) # Enable CORS for all origins
@@ -12,6 +14,8 @@ CORS(app) # Enable CORS for all origins
 # Directory to store uploaded files
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+MULTICAM_FOLDER = os.path.join(UPLOAD_FOLDER, "multicam")
+os.makedirs(MULTICAM_FOLDER, exist_ok=True)
 
 @app.route('/process_video', methods=['POST'])
 def process_video():
@@ -102,6 +106,83 @@ def add_subtitles():
         "message": "Subtitles added successfully",
         "output": out_path
     })
+
+@app.route('/multicam_slide', methods=['POST'])
+def multicam_slide():
+    """
+    Build a single video from two camera videos and a single audio track using diarized speakers
+    to switch cameras with slide-only transitions.
+
+    multipart/form-data fields:
+      - left_video: left camera video file
+      - right_video: right camera video file
+      - audio: final audio file (wav/mp3/m4a)
+    -word_json: word json having word, start, end time and speaker
+    - model_size (optional): whisperx model size (tiny|base|small|medium|large), default 'small'
+    - device (optional): cuda|cpu (defaults to auto)
+      - direction (optional): 'ltr' (default) or 'rtl'
+      - overlap (optional): seconds for slide animation (default 0.6)
+      - output_name (optional): filename for the result (default generated)
+    """
+    if 'left_video' not in request.files or 'right_video' not in request.files or 'audio' not in request.files:
+        return jsonify({"error": "Missing required files: left_video, right_video, audio"}), 400
+
+    left_file = request.files['left_video']
+    right_file = request.files['right_video']
+    audio_file = request.files['audio']
+    direction = request.form.get('direction', 'ltr')
+    model_size = request.form.get('model_size', 'small')
+    device = request.form.get('device','cpu')  # may be None
+    try:
+        overlap = float(request.form.get('overlap', '0.6'))
+    except ValueError:
+        overlap = 0.6
+    output_name = request.form.get('output_name')
+
+    # Persist inputs (specific to multicam under uploads/multicam)
+    os.makedirs(MULTICAM_FOLDER, exist_ok=True)
+    left_path = os.path.join(MULTICAM_FOLDER, f"left_{left_file.filename}")
+    right_path = os.path.join(MULTICAM_FOLDER, f"right_{right_file.filename}")
+    audio_path = os.path.join(MULTICAM_FOLDER, f"audio_{audio_file.filename}")
+    left_file.save(left_path)
+    right_file.save(right_path)
+    audio_file.save(audio_path)
+
+    # Auto-generate words JSON using your transcription utility on the provided audio
+    try:
+        words = transcribe_audio_with_whisperx(
+            audio_path,
+            model_name=model_size,
+            device=device,
+            compute_type="float16" if device == "cuda" else "int8",
+        )
+        print(words)
+    except Exception as e:
+        return jsonify({"error": f"Transcription failed: {e}"}), 500
+    # print(request.form.get('word_json'))
+    if 'word_json' in request.form:
+        words=json.loads(request.form.get('word_json'))
+
+    for w in words:
+        print(w.get('word'),w.get('speaker'))
+    # Output path
+    base = output_name or f"multicam_slide_{os.path.splitext(left_file.filename)[0]}"
+    output_path = os.path.join(MULTICAM_FOLDER, f"{base}.mp4")
+
+    try:
+        res_path = combine_multicam_with_slide(
+            left_video_path=left_path,
+            right_video_path=right_path,
+            audio_path=audio_path,
+            words=words,
+            output_path=output_path,
+            direction=direction,
+            overlap=overlap,
+        )
+    except Exception as e:
+        return jsonify({"error": f"Multicam assembly failed: {e}"}), 500
+
+    return jsonify({"message": "OK", "output": res_path})
 
 @app.route('/health', methods=['GET'])
 def health_check():
