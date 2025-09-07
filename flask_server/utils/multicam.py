@@ -9,6 +9,7 @@ from moviepy.editor import (
     AudioFileClip,
     ImageClip,
 )
+import numpy as np  # added
 
 
 def _norm_speaker(s: str) -> str:
@@ -124,6 +125,82 @@ def _slide_concat(a_path: str, b_path: str, out_path: str, direction: str = 'ltr
     return out_path
 
 
+# === Audio correlation helpers (added) ===
+def _to_mono(x: np.ndarray) -> np.ndarray:
+    if x.ndim == 1:
+        return x.astype(np.float32)
+    return x.mean(axis=1).astype(np.float32)
+
+def _load_wave_audio(path: str, sr: int = 8000, max_seconds: float = 120.0) -> np.ndarray:
+    """Load audio file and return mono waveform at sr."""
+    try:
+        with AudioFileClip(path) as a:
+            if max_seconds is not None:
+                a = a.subclip(0, max_seconds)
+            y = a.to_soundarray(fps=sr)
+            y = _to_mono(y)
+            y = y - (np.mean(y) if y.size else 0.0)
+            std = np.std(y) if y.size else 1.0
+            return y / (std if std > 1e-8 else 1.0)
+    except Exception:
+        return np.zeros(1, dtype=np.float32)
+
+def _load_wave_from_video(path: str, sr: int = 8000, max_seconds: float = 120.0) -> np.ndarray:
+    """Extract video audio and return mono waveform at sr."""
+    try:
+        with VideoFileClip(path) as v:
+            if v.audio is None:
+                return np.zeros(1, dtype=np.float32)
+            a = v.audio
+            if max_seconds is not None:
+                a = a.subclip(0, max_seconds)
+            y = a.to_soundarray(fps=sr)
+            y = _to_mono(y)
+            y = y - (np.mean(y) if y.size else 0.0)
+            std = np.std(y) if y.size else 1.0
+            return y / (std if std > 1e-8 else 1.0)
+    except Exception:
+        return np.zeros(1, dtype=np.float32)
+
+def _xcorr_lag_seconds(ref: np.ndarray, sig: np.ndarray, sr: int, max_shift_s: float = 3.0) -> float:
+    """Return lag in seconds where sig is best aligned to ref (ref ~ sig shifted by lag)."""
+    if ref.size < 8 or sig.size < 8:
+        return 0.0
+    L = min(ref.size, sig.size)
+    a = ref[:L]
+    b = sig[:L]
+
+    n = int(1 << (2 * L - 1).bit_length())  # next pow2 >= 2*L
+    A = np.fft.rfft(a, n=n)
+    B = np.fft.rfft(b, n=n)
+    corr = np.fft.irfft(B * np.conj(A), n=n)
+
+    # Reorder to linear correlation with lags from -(L-1) .. (L-1)
+    corr_lin = np.concatenate([corr[-(L - 1):], corr[:L]])
+    lags = np.arange(-L + 1, L, dtype=np.int64)
+
+    maxlag = int(max(1, max_shift_s * sr))
+    mask = (lags >= -maxlag) & (lags <= maxlag)
+    if not np.any(mask):
+        return 0.0
+    idx = np.argmax(corr_lin[mask])
+    lag_samples = lags[mask][idx]
+    return float(lag_samples) / float(sr)
+
+def _estimate_av_offsets(reference_audio_path: str, left_video_path: str, right_video_path: str,
+                         sr: int = 8000, max_shift_s: float = 3.0, max_seconds: float = 120.0) -> Tuple[float, float]:
+    """Return (lag_left, lag_right) in seconds using audio cross-correlation.
+    Positive lag => camera audio is delayed vs. reference audio.
+    """
+    ref = _load_wave_audio(reference_audio_path, sr=sr, max_seconds=max_seconds)
+    left_w = _load_wave_from_video(left_video_path, sr=sr, max_seconds=max_seconds)
+    right_w = _load_wave_from_video(right_video_path, sr=sr, max_seconds=max_seconds)
+    lag_left = _xcorr_lag_seconds(ref, left_w, sr=sr, max_shift_s=max_shift_s) if left_w.size > 1 else 0.0
+    lag_right = _xcorr_lag_seconds(ref, right_w, sr=sr, max_shift_s=max_shift_s) if right_w.size > 1 else 0.0
+    return lag_left, lag_right
+# === end helpers ===
+
+
 def combine_multicam_with_slide(
     left_video_path: str,
     right_video_path: str,
@@ -134,27 +211,44 @@ def combine_multicam_with_slide(
     overlap: float = 0.6,
     speaker_camera_map: Dict[str, str] = None,
     audio_start_offset: float = 0.0,
+    auto_sync: bool = True,            # added: enable correlation-based sync
+    corr_sr: int = 8000,               # added: correlation sample rate
+    corr_max_shift: float = 3.0,       # added: max expected offset in seconds
+    corr_max_seconds: float = 120.0,   # added: only analyze up to N seconds
 ):
     """Combine two camera videos using speaker diarization and slide-only transitions.
 
-    - left_video_path/right_video_path: camera sources assumed time-aligned to audio.
-    - audio_path: single final audio track applied to the composed video.
-    - words: list of {word, start, end, speaker}.
-    - output_path: final output file.
-    - direction: 'ltr' or 'rtl' slide for transitions.
-    - overlap: duration (s) of slide animation.
-    - speaker_camera_map: optional mapping from speaker label to 'left'/'right'.
+    If auto_sync=True, estimate per-camera offsets to the reference audio via cross-correlation,
+    align both camera timelines to audio t=0, and shift word times accordingly.
     """
     speaker_camera_map = speaker_camera_map or {}
 
-    # Collapse to speaker-change segments
-    segs = _words_to_speaker_segments(words)
+    # 1) Estimate offsets via audio correlation (ref vs video audio)
+    lag_left = 0.0
+    lag_right = 0.0
+    if auto_sync:
+        try:
+            lag_left, lag_right = _estimate_av_offsets(
+                audio_path, left_video_path, right_video_path,
+                sr=corr_sr, max_shift_s=corr_max_shift, max_seconds=corr_max_seconds
+            )
+        except Exception:
+            lag_left, lag_right = 0.0, 0.0
 
-    tmp_dir = os.path.join(os.path.dirname(output_path) or '.', 'tmp_multicam')
-    os.makedirs(tmp_dir, exist_ok=True)
+    # Choose a common audio trim so that final video t=0 == reference audio time t0
+    # Ensure both camera starts are >= 0 by picking t0 >= max(-lag_left, -lag_right, 0)
+    t0 = max(0.0, -lag_left, -lag_right)
 
-    # Prepare aligned base clips to measure size/fps
-    with VideoFileClip(left_video_path) as left, VideoFileClip(right_video_path) as right:
+    # 2) Prepare aligned base clips
+    with VideoFileClip(left_video_path) as left_raw, VideoFileClip(right_video_path) as right_raw:
+        # Starting positions in sources so that their content aligns with audio at time t0
+        left_start = max(0.0, t0 + lag_left)
+        right_start = max(0.0, t0 + lag_right)
+
+        left = left_raw.subclip(left_start)
+        right = right_raw.subclip(right_start)
+
+        # Match geometry/fps
         W, H = left.w, left.h
         fps = left.fps
         if right.w != W or right.h != H:
@@ -162,18 +256,21 @@ def combine_multicam_with_slide(
         if right.fps != fps:
             right = right.set_fps(fps)
 
-        # Effective duration is the overlap of both cameras
+        # Effective duration limited by overlapped cameras
         video_duration = min(left.duration, right.duration)
+
+        # 3) Collapse to speaker-change segments
+        segs = _words_to_speaker_segments(words) if words else []
 
         # If no segments (no words), default to whole video with speaker_00
         if not segs:
             mapped_segs: List[Tuple[float, float, str]] = [(0.0, video_duration, "speaker_00")]
         else:
-            # Map audio segments into video timeline using offset and clamp to bounds
+            # Map audio segments into aligned video timeline by subtracting t0 (audio trimmed by t0)
             mapped_segs = []
             for (start, end, spk) in segs:
-                v_start = start + audio_start_offset
-                v_end = end + audio_start_offset
+                v_start = start - t0
+                v_end = end - t0
                 if v_end <= 0 or v_start >= video_duration:
                     continue
                 v_start = max(0.0, v_start)
@@ -194,7 +291,7 @@ def combine_multicam_with_slide(
             if cur < video_duration:
                 filled.append((cur, video_duration, "speaker_00"))
 
-            # Merge adjacent segments with same speaker (including speaker_00 + silence merging)
+            # Merge adjacent equal-speaker segments (including speaker_00)
             merged: List[Tuple[float, float, str]] = []
             for seg in filled:
                 if not merged:
@@ -208,8 +305,8 @@ def combine_multicam_with_slide(
                         merged.append(seg)
             mapped_segs = merged
 
-        # Build camera timeline: switch only when speaker changes; prefer not switching on very short segments
-        min_switch_secs = 0.35  # avoid flicker on ultra-short bits
+        # 4) Build camera timeline (switch only on speaker changes; avoid flicker)
+        min_switch_secs = 0.35
         cam_timeline: List[Tuple[float, float, str]] = []
         last_cam = None
         for (s, e, spk) in mapped_segs:
@@ -223,18 +320,18 @@ def combine_multicam_with_slide(
                     cam_timeline.append((s, e, desired_cam))
                     last_cam = desired_cam
                 else:
-                    # extend previous segment
                     ps, pe, pc = cam_timeline[-1]
                     cam_timeline[-1] = (ps, e, pc)
 
-        # Build per-segment subclips using the chosen camera
+        # 5) Cut subclips
+        tmp_dir = os.path.join(os.path.dirname(output_path) or '.', 'tmp_multicam')
+        os.makedirs(tmp_dir, exist_ok=True)
+
         piece_paths: List[str] = []
         for idx, (start, end, cam_sel) in enumerate(cam_timeline, start=1):
-            cam = cam_sel if cam_sel in ('left', 'right') else _pick_camera(cam_sel, speaker_camera_map)
-            src = left if cam == 'left' else right
-            # Clip bounds safety
-            s = max(0, min(start, src.duration - 0.001))
-            e = max(0, min(end, src.duration))
+            src = left if cam_sel == 'left' else right
+            s = max(0.0, min(start, src.duration - 1e-3))
+            e = max(0.0, min(end, src.duration))
             if e <= s:
                 continue
             sub = src.subclip(s, e).without_audio()
@@ -249,12 +346,11 @@ def combine_multicam_with_slide(
     if not piece_paths:
         raise ValueError("No valid subclips were created.")
 
-    # Iteratively merge with slide-only transitions
+    # 6) Slide-only transitions
     current_path = piece_paths[0]
     for next_path in piece_paths[1:]:
-        merged_path = os.path.join(tmp_dir, f"merge_{uuid.uuid4().hex}.mp4")
+        merged_path = os.path.join(os.path.dirname(output_path) or '.', 'tmp_multicam', f"merge_{uuid.uuid4().hex}.mp4")
         _slide_concat(current_path, next_path, merged_path, direction=direction, overlap=overlap)
-        # cleanup previous piece files
         try:
             if os.path.exists(current_path) and os.path.basename(current_path).startswith(('piece_', 'merge_')):
                 os.remove(current_path)
@@ -262,19 +358,12 @@ def combine_multicam_with_slide(
             pass
         current_path = merged_path
 
-    # Attach the single audio track with start offset
-    with VideoFileClip(current_path) as vid, AudioFileClip(audio_path) as aud:
-        # Apply audio start offset relative to video timeline
-        if audio_start_offset > 0:
-            aud = aud.set_start(audio_start_offset)
-        elif audio_start_offset < 0:
-            # If audio starts before video, trim the leading portion
-            aud = aud.subclip(-audio_start_offset)
+    # 7) Attach the reference audio, trimmed by t0 (so audio starts at video t=0)
+    with VideoFileClip(current_path) as vid, AudioFileClip(audio_path) as aud_raw:
+        aud = aud_raw.subclip(t0) if t0 > 0 else aud_raw
         # Trim tail if audio exceeds video
-        if (aud.duration + max(0.0, audio_start_offset)) > vid.duration:
-            # Ensure audio does not exceed video duration
-            max_aud = max(0.0, vid.duration - max(0.0, audio_start_offset))
-            aud = aud.subclip(0, max_aud)
+        if aud.duration > vid.duration:
+            aud = aud.subclip(0, vid.duration)
         final = vid.set_audio(aud)
         final.write_videofile(output_path, codec='libx264', audio_codec='aac')
         try:
@@ -282,16 +371,15 @@ def combine_multicam_with_slide(
         except Exception:
             pass
 
-    # Cleanup tmp
+    # Cleanup temps
     try:
         if os.path.exists(current_path) and os.path.basename(current_path).startswith(('piece_', 'merge_')):
             os.remove(current_path)
-        # Remove remaining temp pieces
         for p in piece_paths:
             if os.path.exists(p):
                 os.remove(p)
-        # Optionally remove tmp_dir if empty
-        if not os.listdir(tmp_dir):
+        tmp_dir = os.path.join(os.path.dirname(output_path) or '.', 'tmp_multicam')
+        if os.path.isdir(tmp_dir) and not os.listdir(tmp_dir):
             os.rmdir(tmp_dir)
     except Exception:
         pass
