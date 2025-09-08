@@ -10,6 +10,9 @@ from moviepy.editor import (
     ImageClip,
 )
 import numpy as np  # added
+import librosa
+from scipy.signal import correlate
+import tempfile
 
 
 def _norm_speaker(s: str) -> str:
@@ -131,72 +134,123 @@ def _to_mono(x: np.ndarray) -> np.ndarray:
         return x.astype(np.float32)
     return x.mean(axis=1).astype(np.float32)
 
-def _load_wave_audio(path: str, sr: int = 8000, max_seconds: float = 120.0) -> np.ndarray:
-    """Load audio file and return mono waveform at sr."""
+def _load_wave_audio(path: str, sr: int = 8000, max_seconds: float = 120.0) -> str:
+    """Ensure a WAV file exists for the reference audio and return its path.
+
+    If input is already a .wav, returns the original path. Otherwise, writes a
+    temporary PCM WAV (trimmed to max_seconds, resampled to sr) and returns that path.
+    Caller is responsible for deleting the temp file when done (if path != original).
+    """
     try:
+        if str(path).lower().endswith('.wav'):
+            return path
         with AudioFileClip(path) as a:
             if max_seconds is not None:
+                max_seconds=min(max_seconds,a.duration)
                 a = a.subclip(0, max_seconds)
-            y = a.to_soundarray(fps=sr)
-            y = _to_mono(y)
-            y = y - (np.mean(y) if y.size else 0.0)
-            std = np.std(y) if y.size else 1.0
-            return y / (std if std > 1e-8 else 1.0)
-    except Exception:
-        return np.zeros(1, dtype=np.float32)
+            fd, tmp = tempfile.mkstemp(suffix='.wav')
+            os.close(fd)
+            wav_path = tmp
+            a.write_audiofile(wav_path, fps=sr, codec='pcm_s16le', verbose=False, logger=None)
+        return wav_path
+    except Exception as e:
+        print('error in load',e)
+        return ""
 
-def _load_wave_from_video(path: str, sr: int = 8000, max_seconds: float = 120.0) -> np.ndarray:
-    """Extract video audio and return mono waveform at sr."""
+def _load_wave_from_video(path: str, sr: int = 8000, max_seconds: float = 120.0) -> str:
+    """Extract video audio by writing a temporary WAV and return its path; no normalization or array loading.
+    
+    Returns the path to the temporary WAV file. Caller is responsible for deleting it when done.
+    """
     try:
         with VideoFileClip(path) as v:
             if v.audio is None:
-                return np.zeros(1, dtype=np.float32)
+                # If no audio, create an empty WAV file
+                fd, wav_path = tempfile.mkstemp(suffix='.wav')
+                os.close(fd)
+                # Write a minimal silent WAV (librosa can handle empty files, but we'll create a short one)
+                silent_audio = np.zeros(int(sr * 0.1), dtype=np.float32)  # 0.1 second silence
+                librosa.output.write_wav(wav_path, silent_audio, sr)
+                return wav_path
             a = v.audio
             if max_seconds is not None:
+                max_seconds=min(max_seconds,a.duration)
                 a = a.subclip(0, max_seconds)
-            y = a.to_soundarray(fps=sr)
-            y = _to_mono(y)
-            y = y - (np.mean(y) if y.size else 0.0)
-            std = np.std(y) if y.size else 1.0
-            return y / (std if std > 1e-8 else 1.0)
-    except Exception:
-        return np.zeros(1, dtype=np.float32)
+            fd, wav_path = tempfile.mkstemp(suffix='.wav')
+            os.close(fd)
+            a.write_audiofile(wav_path, fps=sr, codec='pcm_s16le', verbose=False, logger=None)
+        return wav_path
+    except Exception as e:
+        print('error in video',e)
+        return ""
 
-def _xcorr_lag_seconds(ref: np.ndarray, sig: np.ndarray, sr: int, max_shift_s: float = 3.0) -> float:
-    """Return lag in seconds where sig is best aligned to ref (ref ~ sig shifted by lag)."""
-    if ref.size < 8 or sig.size < 8:
-        return 0.0
-    L = min(ref.size, sig.size)
-    a = ref[:L]
-    b = sig[:L]
+def calculate_time_lag(ref_audio_path, lag_audio_path, corr_sr=8000, max_shift_s=100.0, max_seconds=60.0):
+    """
+    Calculates the time lag with optimizations for speed.
 
-    n = int(1 << (2 * L - 1).bit_length())  # next pow2 >= 2*L
-    A = np.fft.rfft(a, n=n)
-    B = np.fft.rfft(b, n=n)
-    corr = np.fft.irfft(B * np.conj(A), n=n)
+    Args:
+        ref_audio_path (str): File path to the reference audio.
+        lag_audio_path (str): File path to the lagging audio.
+        corr_sr (int): Sampling rate for correlation. Higher values increase accuracy but also computation time.
+        max_shift_s (float): Maximum expected lag in seconds. Reduces computation by limiting the search range.
+        max_seconds (float): Maximum duration of audio to consider for lag calculation.
 
-    # Reorder to linear correlation with lags from -(L-1) .. (L-1)
-    corr_lin = np.concatenate([corr[-(L - 1):], corr[:L]])
-    lags = np.arange(-L + 1, L, dtype=np.int64)
+    Returns:
+        float: The time offset in seconds. A positive value indicates the
+               'lagging_audio' starts after 'reference_audio'.
+    """
+    print(ref_audio_path,lag_audio_path,sep='/n/n')
+    # Load and downsample to corr_sr for faster correlation
+    ref_signal, sr_ref = librosa.load(ref_audio_path, sr=corr_sr, duration=max_seconds)
+    lag_signal, sr_lag = librosa.load(lag_audio_path, sr=corr_sr, duration=max_seconds)
+    print('Audio loaded and downsampled')
+    
+    # Ensure SRs match (should be corr_sr)
+    sr = corr_sr
+    
+    # Limit lag_signal to avoid excessive computation
+    max_shift_samples = int(max_shift_s * sr)
+    lag_signal = lag_signal[:len(ref_signal) + max_shift_samples]  # Trim to reasonable length
+    
+    # FFT-based correlation (faster than np.correlate)
+    correlation = correlate(lag_signal, ref_signal, mode='full')
+    
+    # Find peak within max_shift range
+    zero_lag_idx = len(ref_signal) - 1
+    start_idx = max(0, zero_lag_idx - max_shift_samples)
+    end_idx = min(len(correlation), zero_lag_idx + max_shift_samples)
+    peak_index = start_idx + np.argmax(correlation[start_idx:end_idx])
+    
+    offset_samples = peak_index - zero_lag_idx
+    offset_seconds = offset_samples / sr
+    
+    return offset_seconds
 
-    maxlag = int(max(1, max_shift_s * sr))
-    mask = (lags >= -maxlag) & (lags <= maxlag)
-    if not np.any(mask):
-        return 0.0
-    idx = np.argmax(corr_lin[mask])
-    lag_samples = lags[mask][idx]
-    return float(lag_samples) / float(sr)
+
 
 def _estimate_av_offsets(reference_audio_path: str, left_video_path: str, right_video_path: str,
-                         sr: int = 8000, max_shift_s: float = 3.0, max_seconds: float = 120.0) -> Tuple[float, float]:
+                         sr: int = 8000, max_shift_s: float = 100.0, max_seconds: float = 120.0) -> Tuple[float, float]:
     """Return (lag_left, lag_right) in seconds using audio cross-correlation.
     Positive lag => camera audio is delayed vs. reference audio.
     """
-    ref = _load_wave_audio(reference_audio_path, sr=sr, max_seconds=max_seconds)
-    left_w = _load_wave_from_video(left_video_path, sr=sr, max_seconds=max_seconds)
-    right_w = _load_wave_from_video(right_video_path, sr=sr, max_seconds=max_seconds)
-    lag_left = _xcorr_lag_seconds(ref, left_w, sr=sr, max_shift_s=max_shift_s) if left_w.size > 1 else 0.0
-    lag_right = _xcorr_lag_seconds(ref, right_w, sr=sr, max_shift_s=max_shift_s) if right_w.size > 1 else 0.0
+    ref_wav_path = _load_wave_audio(reference_audio_path, sr=sr, max_seconds=max_seconds)
+    left_wav_path = _load_wave_from_video(left_video_path, sr=sr, max_seconds=max_seconds)
+    right_wav_path = _load_wave_from_video(right_video_path, sr=sr, max_seconds=max_seconds)
+    print("ref", ref_wav_path)
+    print('left',left_wav_path)
+    print('right',right_wav_path)
+    lag_left = calculate_time_lag(ref_wav_path, left_wav_path, corr_sr=sr, max_shift_s=max_shift_s)
+    lag_right = calculate_time_lag(ref_wav_path, right_wav_path, corr_sr=sr, max_shift_s=max_shift_s)
+
+    # Cleanup temp WAV files
+    for wav_path in [ref_wav_path, left_wav_path, right_wav_path]:
+        if wav_path and wav_path != reference_audio_path and os.path.exists(wav_path):
+            try:
+                os.remove(wav_path)
+            except Exception:
+                pass
+
+    print(lag_left, lag_right)
     return lag_left, lag_right
 # === end helpers ===
 
@@ -213,7 +267,7 @@ def combine_multicam_with_slide(
     audio_start_offset: float = 0.0,
     auto_sync: bool = True,            # added: enable correlation-based sync
     corr_sr: int = 8000,               # added: correlation sample rate
-    corr_max_shift: float = 3.0,       # added: max expected offset in seconds
+    corr_max_shift: float = 100.0,       # added: max expected offset in seconds
     corr_max_seconds: float = 120.0,   # added: only analyze up to N seconds
 ):
     """Combine two camera videos using speaker diarization and slide-only transitions.
@@ -232,11 +286,16 @@ def combine_multicam_with_slide(
                 audio_path, left_video_path, right_video_path,
                 sr=corr_sr, max_shift_s=corr_max_shift, max_seconds=corr_max_seconds
             )
-        except Exception:
+        except Exception as e:
+            import traceback
+            print("Failed to estimate AV offsets:", type(e).__name__, str(e))
+            traceback.print_exc()
+            print('h')
             lag_left, lag_right = 0.0, 0.0
-
+    print("l r",lag_left,lag_right)
     # Choose a common audio trim so that final video t=0 == reference audio time t0
     # Ensure both camera starts are >= 0 by picking t0 >= max(-lag_left, -lag_right, 0)
+
     t0 = max(0.0, -lag_left, -lag_right)
 
     # 2) Prepare aligned base clips

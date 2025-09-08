@@ -134,9 +134,9 @@ def multicam_slide():
     model_size = request.form.get('model_size', 'small')
     device = request.form.get('device','cpu')  # may be None
     try:
-        overlap = float(request.form.get('overlap', '0.6'))
+        overlap = float(request.form.get('overlap', '0.1'))
     except ValueError:
-        overlap = 0.6
+        overlap = 0.1
     output_name = request.form.get('output_name')
 
     # Persist inputs (specific to multicam under uploads/multicam)
@@ -149,22 +149,26 @@ def multicam_slide():
     audio_file.save(audio_path)
 
     # Auto-generate words JSON using your transcription utility on the provided audio
-    try:
-        words = transcribe_audio_with_whisperx(
-            audio_path,
-            model_name=model_size,
-            device=device,
-            compute_type="float16" if device == "cuda" else "int8",
-        )
-        print(words)
-    except Exception as e:
-        return jsonify({"error": f"Transcription failed: {e}"}), 500
-    # print(request.form.get('word_json'))
+
     if 'word_json' in request.form:
         words=json.loads(request.form.get('word_json'))
+    else :
+        try:
+            words = transcribe_audio_with_whisperx(
+                audio_path,
+                model_name=model_size,
+                device=device,
+                compute_type="float16" if device == "cuda" else "int8",
+            )
+            print(words)
+        except Exception as e:
+            return jsonify({"error": f"Transcription failed: {e}"}), 500
+    
+    # print(request.form.get('word_json'))
+    
 
-    for w in words:
-        print(w.get('word'),w.get('speaker'))
+    # for w in words:
+    #     print(w.get('word'),w.get('speaker'))
     # Output path
     base = output_name or f"multicam_slide_{os.path.splitext(left_file.filename)[0]}"
     output_path = os.path.join(MULTICAM_FOLDER, f"{base}.mp4")
