@@ -136,7 +136,7 @@ def multicam_slide():
     try:
         overlap = float(request.form.get('overlap', '0.1'))
     except ValueError:
-        overlap = 0.1
+        overlap = 0.3
     output_name = request.form.get('output_name')
 
     # Persist inputs (specific to multicam under uploads/multicam)
