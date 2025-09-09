@@ -21,7 +21,7 @@ aws_secret_access_key = os.getenv('AWS_S3_SECRET_ACCESS_KEY')
 region_name = os.getenv('AWS_S3_REGION_NAME')
 
 url=upload_to_s3(
-    file_path=r"D:\Self\Gen ai\subtitle test\flask\uploads\test.mp4",
+    file_path=r"D:\Self\Gen ai\subtitle test\flask_server\uploads\prev\segment1_final.mp4",
     bucket_name=bucket_name,
     s3_key="segment2.mp4",
     aws_access_key_id=aws_access_key_id,

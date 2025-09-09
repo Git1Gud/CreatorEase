@@ -4,6 +4,7 @@ from utils.segment_pipeline import process_and_save_video_with_segments
 from utils.caption_utils import add_dynamic_subtitles_to_video
 from utils.transcription_utils import transcribe_audio_with_whisperx
 from utils.multicam import combine_multicam_with_slide
+from utils.cloudinary_utils import upload_video
 import os
 import time
 import json
@@ -134,7 +135,7 @@ def multicam_slide():
     model_size = request.form.get('model_size', 'small')
     device = request.form.get('device','cpu')  # may be None
     try:
-        overlap = float(request.form.get('overlap', '0.1'))
+        overlap = float(request.form.get('overlap', '0.3'))
     except ValueError:
         overlap = 0.3
     output_name = request.form.get('output_name')
@@ -174,7 +175,7 @@ def multicam_slide():
     output_path = os.path.join(MULTICAM_FOLDER, f"{base}.mp4")
 
     try:
-        res_path = combine_multicam_with_slide(
+        url = combine_multicam_with_slide(
             left_video_path=left_path,
             right_video_path=right_path,
             audio_path=audio_path,
@@ -185,12 +186,15 @@ def multicam_slide():
         )
     except Exception as e:
         return jsonify({"error": f"Multicam assembly failed: {e}"}), 500
-
-    return jsonify({"message": "OK", "output": res_path})
+    final_output=os.path.join(UPLOAD_FOLDER, f"output_with_captions.mp4")
+    add_dynamic_subtitles_to_video(video_path=output_path,words_with_timestamps=words,output_path=final_output)
+    end_url=upload_video(final_output)
+    # end_url= r'http://res.cloudinary.com/dxt0biqah/video/upload/v1757411328/videos/swgfyxrttojxrjuqcdv4.mp4'
+    return jsonify({"message": "OK", "output": end_url})
 
 @app.route('/health', methods=['GET'])
 def health_check():
     return jsonify({"status": "zaidgey"})
 
-if __name__ == "__main__":
+if __name__ == "__main__":  
     app.run(debug=True)

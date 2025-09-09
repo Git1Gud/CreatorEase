@@ -13,6 +13,7 @@ import numpy as np  # added
 import librosa
 from scipy.signal import correlate
 import tempfile
+from utils.s3_utils import upload_to_s3
 
 
 def _norm_speaker(s: str) -> str:
@@ -385,7 +386,7 @@ def combine_multicam_with_slide(
         # 5) Cut subclips
         tmp_dir = os.path.join(os.path.dirname(output_path) or '.', 'tmp_multicam')
         os.makedirs(tmp_dir, exist_ok=True)
-
+        print(cam_timeline)
         piece_paths: List[str] = []
         for idx, (start, end, cam_sel) in enumerate(cam_timeline, start=1):
             src = left if cam_sel == 'left' else right
@@ -440,7 +441,9 @@ def combine_multicam_with_slide(
         tmp_dir = os.path.join(os.path.dirname(output_path) or '.', 'tmp_multicam')
         if os.path.isdir(tmp_dir) and not os.listdir(tmp_dir):
             os.rmdir(tmp_dir)
-    except Exception:
+    except Exception as e:
+        print('error in removing temp files',e)
         pass
-
-    return output_path
+    # url=upload_to_s3(output_path,s3_key=output_path)
+    url=r'https://zaidcre.s3.us-east-1.amazonaws.com/uploads\\multicam\\multicam_slide_cam1_synced.mp4'
+    return url
