@@ -132,7 +132,7 @@ def multicam_slide():
     right_file = request.files['right_video']
     audio_file = request.files['audio']
     direction = request.form.get('direction', 'ltr')
-    model_size = request.form.get('model_size', 'small')
+    model_size = request.form.get('model_size', 'medium')
     device = request.form.get('device','cpu')  # may be None
     try:
         overlap = float(request.form.get('overlap', '0.3'))

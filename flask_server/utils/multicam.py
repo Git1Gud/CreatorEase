@@ -266,10 +266,11 @@ def combine_multicam_with_slide(
     overlap: float = 0.6,
     speaker_camera_map: Dict[str, str] = None,
     audio_start_offset: float = 0.0,
-    auto_sync: bool = True,            # added: enable correlation-based sync
-    corr_sr: int = 8000,               # added: correlation sample rate
-    corr_max_shift: float = 100.0,       # added: max expected offset in seconds
-    corr_max_seconds: float = 120.0,   # added: only analyze up to N seconds
+    auto_sync: bool = True,
+    corr_sr: int = 8000,
+    corr_max_shift: float = 100.0,
+    corr_max_seconds: float = 120.0,
+    full_duration: bool = False,
 ):
     """Combine two camera videos using speaker diarization and slide-only transitions.
 
@@ -277,47 +278,89 @@ def combine_multicam_with_slide(
     align both camera timelines to audio t=0, and shift word times accordingly.
     """
     speaker_camera_map = speaker_camera_map or {}
+    
+    # Create a temporary directory for normalized files if it doesn't exist
+    tmp_dir = os.path.join(os.path.dirname(output_path) or '.', 'tmp_multicam')
+    os.makedirs(tmp_dir, exist_ok=True)
 
-    # 1) Estimate offsets via audio correlation (ref vs video audio)
+    # --- FPS Normalization (ADDED SECTION) ---
+    # This section ensures both videos have the same constant frame rate before processing.
+    
+    def _normalize_fps(path: str, target_fps: float) -> str:
+        """Re-encodes video to a target CFR if its FPS is different."""
+        try:
+            with VideoFileClip(path) as clip:
+                # Use a small tolerance for floating point inaccuracies
+                if clip.fps is None or abs(clip.fps - target_fps) < 0.1:
+                    print(f"FPS of {os.path.basename(path)} is already ~{target_fps}. No normalization needed.")
+                    return path
+                
+                print(f"Normalizing FPS for {os.path.basename(path)} from {clip.fps:.2f} to {target_fps:.2f}...")
+                tmp_norm_path = os.path.join(tmp_dir, f"norm_{uuid.uuid4().hex}.mp4")
+                # Re-encode with the target FPS, which correctly adjusts the video
+                clip.write_videofile(tmp_norm_path, codec='libx264', audio=False, fps=target_fps, logger=None)
+                return tmp_norm_path
+        except Exception as e:
+            print(f"Warning: FPS normalization failed for {path}: {e}. Using original file.")
+            return path
+
+    # 1. Determine the target FPS by taking the minimum of the two inputs.
+    try:
+        with VideoFileClip(left_video_path) as v_left, VideoFileClip(right_video_path) as v_right:
+            fps_left = v_left.fps or 30.0
+            fps_right = v_right.fps or 30.0
+            # Choose the lower FPS to avoid creating artificial frames
+            target_fps = min(fps_left, fps_right)
+            print(f"Target FPS set to: {target_fps:.2f}")
+    except Exception as e:
+        print(f"Warning: Could not probe video FPS: {e}. Defaulting to 30 FPS.")
+        target_fps = 30.0
+
+    # 2. Normalize each video to the target FPS and get paths to the new files.
+    norm_left_path = _normalize_fps(left_video_path, target_fps)
+    norm_right_path = _normalize_fps(right_video_path, target_fps)
+    
+    # 3. Use these normalized paths for the rest of the script.
+    # --- END OF ADDED SECTION ---
+
     lag_left = 0.0
     lag_right = 0.0
     if auto_sync:
         try:
+            # Use the normalized paths for audio sync
             lag_left, lag_right = _estimate_av_offsets(
-                audio_path, left_video_path, right_video_path,
+                audio_path, norm_left_path, norm_right_path,
                 sr=corr_sr, max_shift_s=corr_max_shift, max_seconds=corr_max_seconds
             )
         except Exception as e:
             import traceback
-            print("Failed to estimate AV offsets:", type(e).__name__, str(e))
+            print(f"Failed to estimate AV offsets: {e}")
             traceback.print_exc()
-            print('h')
             lag_left, lag_right = 0.0, 0.0
-    print("l r",lag_left,lag_right)
-    # Choose a common audio trim so that final video t=0 == reference audio time t0
-    # Ensure both camera starts are >= 0 by picking t0 >= max(-lag_left, -lag_right, 0)
-
+    
+    print(f"Detected lags -> Left: {lag_left:.3f}s, Right: {lag_right:.3f}s")
     t0 = max(0.0, -lag_left, -lag_right)
 
-    # 2) Prepare aligned base clips
-    with VideoFileClip(left_video_path) as left_raw, VideoFileClip(right_video_path) as right_raw:
-        # Starting positions in sources so that their content aligns with audio at time t0
+    # All subsequent operations use the normalized video paths
+    with VideoFileClip(norm_left_path) as left_raw, VideoFileClip(norm_right_path) as right_raw:
         left_start = max(0.0, t0 + lag_left)
         right_start = max(0.0, t0 + lag_right)
 
         left = left_raw.subclip(left_start)
         right = right_raw.subclip(right_start)
-
-        # Match geometry/fps
+        
         W, H = left.w, left.h
-        fps = left.fps
         if right.w != W or right.h != H:
             right = right.resize((W, H))
-        if right.fps != fps:
-            right = right.set_fps(fps)
-
-        # Effective duration limited by overlapped cameras
-        video_duration = min(left.duration, right.duration)
+        
+        # The FPS for all operations is now the consistent target_fps
+        fps = target_fps
+        
+        # Determine timeline duration
+        if full_duration:
+            video_duration = max(left.duration, right.duration)
+        else:
+            video_duration = min(left.duration, right.duration)
 
         # 3) Collapse to speaker-change segments
         segs = _words_to_speaker_segments(words) if words else []
@@ -384,19 +427,48 @@ def combine_multicam_with_slide(
                     cam_timeline[-1] = (ps, e, pc)
 
         # 5) Cut subclips
-        tmp_dir = os.path.join(os.path.dirname(output_path) or '.', 'tmp_multicam')
-        os.makedirs(tmp_dir, exist_ok=True)
         print(cam_timeline)
         piece_paths: List[str] = []
         for idx, (start, end, cam_sel) in enumerate(cam_timeline, start=1):
-            src = left if cam_sel == 'left' else right
-            s = max(0.0, min(start, src.duration - 1e-3))
-            e = max(0.0, min(end, src.duration))
-            if e <= s:
+            # Skip segments beyond global video_duration
+            if start >= video_duration:
                 continue
-            sub = src.subclip(s, e).without_audio()
+            if end > video_duration:
+                end = video_duration
+            src = left if cam_sel == 'left' else right
+            # If chosen camera has no coverage for this segment (starts after src end), try other camera
+            if start >= src.duration:
+                alt = right if cam_sel == 'left' else left
+                if start < alt.duration:  # switch
+                    src = alt
+                else:
+                    # nothing available; fill with black freeze frame if full_duration
+                    if full_duration:
+                        from moviepy.video.VideoClip import ColorClip
+                        duration_missing = end - start
+                        if duration_missing <= 0:
+                            continue
+                        freeze_clip = ColorClip(size=(W, H), color=(0,0,0), duration=duration_missing).set_fps(fps)
+                        piece_path = os.path.join(tmp_dir, f"piece_{idx}_{uuid.uuid4().hex}.mp4")
+                        freeze_clip.write_videofile(piece_path, codec='libx264', audio=False, fps=fps)
+                        piece_paths.append(piece_path)
+                    continue
+            s = max(0.0, min(start, max(src.duration - 1e-3, 0)))
+            real_end = min(end, src.duration)
+            if real_end <= s:
+                continue
+            sub = src.subclip(s, real_end).without_audio()
+            # Pad with freeze frame if this segment extends past source duration and full_duration requested
+            if full_duration and end > src.duration and (end - src.duration) > 1e-3:
+                frame_time = max(src.duration - 1.0 / max(fps, 1), 0)
+                try:
+                    last_frame = src.get_frame(frame_time)
+                    freeze = ImageClip(last_frame).set_duration(end - src.duration)
+                    sub = concatenate_videoclips([sub, freeze], method='compose')
+                except Exception as e:
+                    print("Failed to create freeze frame extension:", e)
             piece_path = os.path.join(tmp_dir, f"piece_{idx}_{uuid.uuid4().hex}.mp4")
-            sub.write_videofile(piece_path, codec='libx264', audio=False)
+            sub.write_videofile(piece_path, codec='libx264', audio=False, fps=fps)
             try:
                 sub.close()
             except Exception:
@@ -409,7 +481,7 @@ def combine_multicam_with_slide(
     # 6) Slide-only transitions
     current_path = piece_paths[0]
     for next_path in piece_paths[1:]:
-        merged_path = os.path.join(os.path.dirname(output_path) or '.', 'tmp_multicam', f"merge_{uuid.uuid4().hex}.mp4")
+        merged_path = os.path.join(tmp_dir, f"merge_{uuid.uuid4().hex}.mp4")
         _slide_concat(current_path, next_path, merged_path, direction=direction, overlap=overlap)
         try:
             if os.path.exists(current_path) and os.path.basename(current_path).startswith(('piece_', 'merge_')):
@@ -421,11 +493,10 @@ def combine_multicam_with_slide(
     # 7) Attach the reference audio, trimmed by t0 (so audio starts at video t=0)
     with VideoFileClip(current_path) as vid, AudioFileClip(audio_path) as aud_raw:
         aud = aud_raw.subclip(t0) if t0 > 0 else aud_raw
-        # Trim tail if audio exceeds video
         if aud.duration > vid.duration:
             aud = aud.subclip(0, vid.duration)
         final = vid.set_audio(aud)
-        final.write_videofile(output_path, codec='libx264', audio_codec='aac')
+        final.write_videofile(output_path, codec='libx264', audio_codec='aac', fps=fps)
         try:
             final.close()
         except Exception:
@@ -438,12 +509,17 @@ def combine_multicam_with_slide(
         for p in piece_paths:
             if os.path.exists(p):
                 os.remove(p)
-        tmp_dir = os.path.join(os.path.dirname(output_path) or '.', 'tmp_multicam')
+        
+        for path in [norm_left_path, norm_right_path]:
+            if path not in [left_video_path, right_video_path] and os.path.exists(path):
+                print(f"Cleaning up normalized file: {os.path.basename(path)}")
+                os.remove(path)
+
         if os.path.isdir(tmp_dir) and not os.listdir(tmp_dir):
             os.rmdir(tmp_dir)
     except Exception as e:
-        print('error in removing temp files',e)
-        pass
-    # url=upload_to_s3(output_path,s3_key=output_path)
-    url=r'https://zaidcre.s3.us-east-1.amazonaws.com/uploads\\multicam\\multicam_slide_cam1_synced.mp4'
+        print(f'Error during cleanup: {e}')
+    
+    # Your original return
+    url = r'https://zaidcre.s3.us-east-1.amazonaws.com/uploads\\multicam\\multicam_slide_cam1_synced.mp4'
     return url
