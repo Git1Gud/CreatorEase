@@ -2,6 +2,7 @@ from .process_video import process_video_bp
 from .subtitles import subtitles_bp
 from .multicam import multicam_bp
 from .sync import sync_bp
+from .transcipt import transcript_bp
 from .health import health_bp
 
 ALL_BLUEPRINTS = (
@@ -10,4 +11,5 @@ ALL_BLUEPRINTS = (
     multicam_bp,
     sync_bp,
     health_bp,
+    transcript_bp,
 )
