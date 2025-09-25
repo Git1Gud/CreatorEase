@@ -167,20 +167,32 @@ def group_words_into_chunks(words_with_timestamps, min_chunk_duration=1.0):
     return chunks
 
 def add_dynamic_subtitles_to_video(video_path, words_with_timestamps, output_path, style="modern"):
+    video_capture = None
+    output_video = None
+    temp_output = None
     try:
-        import time
-        video = cv2.VideoCapture(video_path)
-        if not video.isOpened():
+        video_path = Path(video_path)
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        if not words_with_timestamps:
+            raise ValueError("No words available to render subtitles.")
+
+        video_capture = cv2.VideoCapture(str(video_path))
+        if not video_capture.isOpened():
             raise ValueError(f"Could not open video file: {video_path}")
-        fps = video.get(cv2.CAP_PROP_FPS)
-        frame_width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
-        frame_height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-        temp_output = output_path + ".temp.mp4"
+
+        fps = video_capture.get(cv2.CAP_PROP_FPS)
+        frame_width = int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+        frame_height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        frame_count = int(video_capture.get(cv2.CAP_PROP_FRAME_COUNT))
+
+        temp_output = output_path.parent / f"{output_path.stem}.temp{output_path.suffix}"
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        output_video = cv2.VideoWriter(temp_output, fourcc, fps, (frame_width, frame_height))
+        output_video = cv2.VideoWriter(str(temp_output), fourcc, fps, (frame_width, frame_height))
         if not output_video.isOpened():
             raise ValueError(f"Could not create output video file: {temp_output}")
+
         vibrant_colors = generate_vibrant_colors(5)
         color_schemes = {
             "modern": {"text": (255, 255, 255), "highlight": (255, 230, 0), "shadow": (0, 0, 0)},
@@ -193,16 +205,19 @@ def add_dynamic_subtitles_to_video(video_path, words_with_timestamps, output_pat
         font_size = int(frame_height * 0.055)
         font = load_font(font_size, bold=True)
         chunks = group_words_into_chunks(words_with_timestamps, min_chunk_duration=1.0)
+        if not chunks:
+            raise ValueError("Unable to group words into caption chunks.")
+
         frame_idx = 0
         chunk_idx = 0
         while frame_idx < frame_count:
-            ret, frame = video.read()
+            ret, frame = video_capture.read()
             if not ret:
                 break
-            current_time = frame_idx / fps
+            current_time = frame_idx / fps if fps else 0
             while (chunk_idx + 1 < len(chunks)) and (current_time > chunks[chunk_idx]["end"]):
                 chunk_idx += 1
-            chunk = chunks[chunk_idx]
+            chunk = chunks[min(chunk_idx, len(chunks) - 1)]
             highlight_idx = None
             for i, word in enumerate(chunk["words"]):
                 if word["start"] <= current_time <= word["end"]:
@@ -220,24 +235,31 @@ def add_dynamic_subtitles_to_video(video_path, words_with_timestamps, output_pat
             )
             output_video.write(frame)
             frame_idx += 1
-        video.release()
+
+        video_capture.release()
         output_video.release()
+
         print("Adding audio to final video...")
-        with VideoFileClip(video_path) as video_clip, \
-             VideoFileClip(temp_output) as processed_clip:
+        with VideoFileClip(str(video_path)) as video_clip, VideoFileClip(str(temp_output)) as processed_clip:
             if video_clip.audio:
                 if video_clip.audio.duration > processed_clip.duration:
                     audio_clip = video_clip.audio.subclip(0, processed_clip.duration)
                 else:
                     audio_clip = video_clip.audio
                 video_with_audio = processed_clip.set_audio(audio_clip)
-                video_with_audio.write_videofile(output_path, codec='libx264', audio_codec='aac', verbose=False, logger=None, threads=4)
+                video_with_audio.write_videofile(str(output_path), codec='libx264', audio_codec='aac', verbose=False, logger=None, threads=4)
             else:
-                processed_clip.write_videofile(output_path, codec='libx264', verbose=False, logger=None, threads=4)
-        if os.path.exists(temp_output):
-            os.remove(temp_output)
+                processed_clip.write_videofile(str(output_path), codec='libx264', verbose=False, logger=None, threads=4)
+
         print(f"Subtitles added successfully! Output: {output_path}")
-        return output_path
+        return str(output_path)
     except Exception as e:
         print(f"Error adding subtitles to video: {e}")
         raise
+    finally:
+        if video_capture is not None:
+            video_capture.release()
+        if output_video is not None:
+            output_video.release()
+        if temp_output is not None:
+            temp_output.unlink(missing_ok=True)

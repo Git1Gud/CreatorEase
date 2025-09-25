@@ -47,9 +47,11 @@ def add_subtitles():
 
     name = video_path.stem
     out_path = settings.upload_folder / f"{name}_with_captions{video_path.suffix}"
+    if video_path.suffix.lower() not in {".mp4", ".mov", ".mkv", ".avi", ".m4v"}:
+        out_path = out_path.with_suffix(".mp4")
 
     try:
-        add_dynamic_subtitles_to_video(str(video_path), words, str(out_path), style=style)
+        add_dynamic_subtitles_to_video(video_path, words, out_path, style=style)
     except Exception as exc:
         return jsonify({"error": f"Captioning failed: {exc}"}), 500
 
