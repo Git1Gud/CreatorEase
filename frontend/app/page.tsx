@@ -20,13 +20,15 @@ const features = [
     icon: Video,
     cta: "Open multicam",
   },
-  // {
-  //   title: "Segment Predictions",
-  //   description: "Preview the top-performing hooks and download the generated assets instantly.",
-  //   href: "/predictions",
-  //   icon: Sparkles,
-  //   cta: "Run predictions",
-  // },
+  {
+    title: "Video Editor",
+    description: "Collaborate and edit video through text, detect silence and much more.",
+    href: "http://localhost:4173/edit",
+    icon: Sparkles,
+    cta: "Open Editor",
+    target: "_blank",
+    rel: "noopener noreferrer",
+  },
 ]
 
 export default function HomePage() {
@@ -57,7 +59,7 @@ export default function HomePage() {
       </section>
 
       <section className="grid gap-6 md:grid-cols-3">
-        {features.map(({ title, description, href, icon: Icon, cta }) => (
+        {features.map(({ title, description, href, icon: Icon, cta, target, rel }) => (
           <Card
             key={title}
             className="group border-gray-800 bg-gray-900/60 backdrop-blur transition-colors hover:border-purple-500/60"
@@ -71,7 +73,7 @@ export default function HomePage() {
             </CardHeader>
             <CardContent>
               <Button asChild className="w-full bg-purple-600 hover:bg-purple-700">
-                <Link href={href} className="inline-flex items-center justify-center gap-2">
+                <Link href={href} target={target} rel={rel} className="inline-flex items-center justify-center gap-2">
                   {cta}
                   <ArrowRight className="h-4 w-4" />
                 </Link>

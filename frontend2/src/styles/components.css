@@ -1,0 +1,184 @@
+/* Playback Controls Styling */
+
+.playback-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  padding: 14px 18px;
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.85));
+  border-radius: 16px;
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(10px);
+}
+
+.playback-controls button {
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+  color: var(--text-primary);
+  background: linear-gradient(145deg, rgba(99, 102, 241, 0.9), rgba(129, 140, 248, 0.8));
+  box-shadow: 0 12px 24px rgba(99, 102, 241, 0.32);
+}
+
+.playback-controls button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 28px rgba(99, 102, 241, 0.42);
+}
+
+.silence-detection-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.55);
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(30, 41, 59, 0.2);
+}
+
+.silence-detection-controls label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.silence-threshold-input {
+  width: 90px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(30, 41, 59, 0.75);
+  color: var(--text-primary);
+  font-size: 14px;
+  margin: 0 14px;
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.silence-threshold-input:focus {
+  outline: none;
+  border-color: rgba(56, 189, 248, 0.55);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+}
+
+.detect-silence-button {
+  background: linear-gradient(145deg, rgba(34, 197, 94, 0.92), rgba(16, 185, 129, 0.78));
+  box-shadow: 0 12px 22px rgba(16, 185, 129, 0.32);
+}
+
+/* Play/Pause button */
+.playback-controls button:first-child {
+  background: linear-gradient(145deg, rgba(14, 165, 233, 0.9), rgba(6, 182, 212, 0.75));
+  box-shadow: 0 12px 26px rgba(56, 189, 248, 0.38);
+}
+
+/* Trim button */
+.trim-button {
+  background: linear-gradient(145deg, rgba(248, 113, 113, 0.95), rgba(244, 63, 94, 0.78));
+  box-shadow: 0 12px 26px rgba(248, 113, 113, 0.38);
+  color: var(--text-primary);
+}
+
+.time-display {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(99, 102, 241, 0.14);
+  color: var(--accent-secondary);
+  border: 1px solid rgba(99, 102, 241, 0.28);
+}
+
+/* Audio Waveform Styling */
+.audio-waveform {
+  margin: 22px 0;
+  padding: 20px;
+  background: linear-gradient(160deg, rgba(15, 23, 42, 0.92), rgba(17, 24, 39, 0.88));
+  border-radius: 18px;
+  box-shadow: var(--shadow-soft);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.audio-waveform h3 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.waveform-container {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.65);
+  width: 100%;
+  height: 80px;
+  box-shadow: inset 0 0 18px rgba(8, 15, 35, 0.55);
+}
+
+/* Transcription Section */
+.transcription-section {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Styles for the delete icon on audio regions */
+.region-delete-icon {
+  position: absolute;
+  top: 3px; /* Fine-tune as needed */
+  right: 3px; /* Fine-tune as needed */
+  cursor: pointer;
+  z-index: 10; /* Ensure it's above the region's content */
+    color: var(--text-primary);
+    background: rgba(15, 23, 42, 0.85);
+  padding: 1px 4px;
+  border-radius: 50%; /* Make it circular */
+  font-size: 10px; /* Adjust size */
+  line-height: 1;
+  font-weight: bold;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  /* Add a subtle shadow for better visibility */
+  box-shadow: 0 0 6px rgba(8, 15, 35, 0.45);
+  /* Ensure the text is not selectable */
+  user-select: none;
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* IE/Edge */
+}
+
+.region-delete-icon:hover {
+    background-color: rgba(248, 113, 113, 0.9);
+    color: var(--text-primary);
+  /* Enhance shadow on hover for a "lifted" effect */
+  box-shadow: 0 0 10px rgba(244, 63, 94, 0.52);
+}
+
+/* Video Panel Styling */
+.video-panel {
+  background: linear-gradient(155deg, rgba(15, 23, 42, 0.92), rgba(17, 24, 39, 0.88));
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.video-panel h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: var(--text-secondary);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.video-preview {
+  border-radius: 14px;
+  background-color: #000;
+  flex-grow: 1;
+  box-shadow: inset 0 0 24px rgba(8, 15, 35, 0.85);
+} 

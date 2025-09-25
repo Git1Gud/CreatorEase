@@ -17,6 +17,7 @@ const rooms = new Map(); // userId -> roomId
 const leaders = new Map(); // roomId -> leaderId
 const roomMembers = new Map(); // roomId -> Set of userIds
 const roomContent = new Map(); // roomId -> { transcription, videoUrl }
+const STREAM_CHUNK_SIZE = 64 * 1024; // 64KB chunks when streaming processed video over socket
 
 const server = app.listen(process.env.PORT || 8000, () => {
     console.log(` Server is running at port : 8000 `);
@@ -38,6 +39,27 @@ if (!fs.existsSync(uploadsDir)) {
 if (!fs.existsSync(processedDir)) {
     fs.mkdirSync(processedDir, { recursive: true });
 }
+
+app.get('/download/:fileName', (req, res) => {
+    const requestedFile = req.params.fileName;
+    if (!requestedFile) {
+        return res.status(400).json({ error: 'Missing file name' });
+    }
+
+    const filePath = path.join(processedDir, requestedFile);
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'File not found' });
+    }
+
+    res.download(filePath, requestedFile, (err) => {
+        if (err) {
+            console.error('Error sending download:', err);
+            if (!res.headersSent) {
+                res.sendStatus(500);
+            }
+        }
+    });
+});
 
 io.on("connection", (socket) => {
     console.log("Connected to socket.io");
@@ -225,11 +247,26 @@ socket.on("process video", async ({ videoUrl, trimHistory, userId, fileName }) =
                 progress: 10 + (progress * 0.9) // 10% already done, remaining 90% for processing
             });
         });
+
+        socket.emit("processing progress", {
+            message: "Processing complete, preparing video stream...",
+            progress: 95
+        });
+
+        const streamedMeta = await streamProcessedVideoOverSocket(socket, outputPath, (fraction) => {
+            socket.emit("processing progress", {
+                message: "Streaming processed video...",
+                progress: Math.min(95 + Math.round(fraction * 5), 100)
+            });
+        });
         
         socket.emit("processing complete", { 
             success: true,
+            fileName: streamedMeta.fileName,
+            size: streamedMeta.size,
+            mimeType: streamedMeta.mimeType,
             downloadUrl: `/download/${path.basename(outputPath)}`,
-            message: "Video processed successfully! Click to download."
+            message: "Video processed successfully and delivered via socket."
         });
 
     } catch (error) {
@@ -310,26 +347,64 @@ function downloadVideoFile(videoUrl, userId) {
 
 // Helper function to process video with trim history using system FFmpeg
 // Helper function to process video with trim history using system FFmpeg
+// Updated processVideoWithFFmpeg function using single filter_complex approach
 function processVideoWithFFmpeg(inputPath, trimHistory, userId, fileName, progressCallback) {
     return new Promise((resolve, reject) => {
+        const sanitizedFileName = (fileName || 'video').replace(/[^a-zA-Z0-9_-]/g, '_');
+        const outputFileName = `processed_${sanitizedFileName}_${userId}_${Date.now()}.mp4`;
+        const outputPath = path.join(processedDir, outputFileName);
+
+        console.log("Input path:", inputPath);
+        console.log("Output path:", outputPath);
+        console.log("Trim history:", trimHistory);
+
         if (!trimHistory || trimHistory.length === 0) {
-            console.log("No trims to apply, copying original file");
-            const outputFileName = `processed_${fileName || 'video'}_${userId}_${Date.now()}.mp4`;
-            const outputPath = path.join(processedDir, outputFileName);
+            console.log("No trims to apply, re-encoding for compatibility");
             
-            // Just copy the file if no trims
-            const copyArgs = ['-i', inputPath, '-c', 'copy', outputPath];
+            const copyArgs = [
+                '-i', inputPath,
+                '-c:v', 'libx264',
+                '-profile:v', 'baseline',
+                '-level', '3.0',
+                '-c:a', 'aac',
+                '-b:a', '128k',
+                '-ar', '44100',
+                '-ac', '2',
+                '-preset', 'medium',
+                '-crf', '23',
+                '-pix_fmt', 'yuv420p',
+                '-movflags', '+faststart',
+                '-shortest',
+                '-y',
+                outputPath
+            ];
+            
+            console.log('FFmpeg no-trim command:', 'ffmpeg', copyArgs.join(' '));
             const ffmpegProcess = spawn('ffmpeg', copyArgs);
             
+            let stderr = '';
             ffmpegProcess.stderr.on('data', (data) => {
-                console.log('FFmpeg stderr:', data.toString());
+                stderr += data.toString();
+                
+                // Extract progress
+                const timeMatch = data.toString().match(/time=(\d{2}):(\d{2}):(\d{2})\./);
+                if (timeMatch && progressCallback) {
+                    progressCallback(50); // Simple progress for copy
+                }
             });
             
             ffmpegProcess.on('close', (code) => {
-                if (code === 0) {
-                    resolve(outputPath);
+                if (code === 0 && fs.existsSync(outputPath)) {
+                    const stats = fs.statSync(outputPath);
+                    if (stats.size > 0) {
+                        console.log(`Output file created: ${outputPath} (${stats.size} bytes)`);
+                        resolve(outputPath);
+                    } else {
+                        reject(new Error('Output file is empty'));
+                    }
                 } else {
-                    reject(new Error(`FFmpeg process exited with code ${code}`));
+                    console.error('FFmpeg stderr:', stderr);
+                    reject(new Error(`FFmpeg process failed with code ${code}`));
                 }
             });
             
@@ -337,149 +412,250 @@ function processVideoWithFFmpeg(inputPath, trimHistory, userId, fileName, progre
             return;
         }
 
-        // Sort trim history by start time
+        // Process with trims using single filter_complex approach
         const sortedTrims = trimHistory.sort((a, b) => a.start - b.start);
-        
-        console.log("Applying trims:", sortedTrims);
+        console.log("Processing trims:", sortedTrims);
 
-        const outputFileName = `processed_${fileName || 'video'}_${userId}_${Date.now()}.mp4`;
-        const outputPath = path.join(processedDir, outputFileName);
-
-        // Create segments between trims (keep everything except trimmed parts)
-        let segments = [];
-        let currentStart = 0;
-
-        sortedTrims.forEach((trim) => {
-            // Add segment before this trim (if there's content)
-            if (currentStart < trim.start) {
-                segments.push({
-                    start: currentStart,
-                    end: trim.start
-                });
-            }
-            currentStart = trim.end;
-        });
-
-        // Add final segment after last trim - but we need to get actual video duration
-        // For now, let's use a more reasonable end time
-        segments.push({
-            start: currentStart,
-            end: null // null means till the end
-        });
-
-        // Filter out empty segments
-        segments = segments.filter(segment => segment.end === null || segment.end > segment.start);
+        // Create segments to keep (similar to your diarization logic)
+        const segments = createSegmentsToKeep(sortedTrims);
+        console.log("Segments to keep:", segments);
 
         if (segments.length === 0) {
             reject(new Error("All video content was trimmed"));
             return;
         }
 
-        console.log("Segments to keep:", segments);
+        // Create single filter_complex command
+        const filterComplex = createFilterComplexForSegments(segments);
+        console.log("Filter complex:", filterComplex);
 
-        // Create temporary files for each segment
-        const tempFiles = [];
-        const tempDir = path.join(processedDir, 'temp');
-        if (!fs.existsSync(tempDir)) {
-            fs.mkdirSync(tempDir, { recursive: true });
-        }
+        // Build single FFmpeg command
+        const args = [
+            '-i', inputPath,
+            '-filter_complex', filterComplex,
+            '-map', '[final_video]',
+            '-map', '[final_audio]',
+            '-c:v', 'libx264',
+            '-profile:v', 'baseline',
+            '-level', '3.0',
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            '-ar', '44100',
+            '-ac', '2',
+            '-preset', 'medium',
+            '-crf', '23',
+            '-pix_fmt', 'yuv420p',
+            '-movflags', '+faststart',
+            '-avoid_negative_ts', 'make_zero',
+            '-fflags', '+genpts',
+            '-y',
+            outputPath
+        ];
 
-        let processedSegments = 0;
+        console.log('FFmpeg filter_complex command:', 'ffmpeg', args.join(' '));
 
-        // Process each segment separately, then concatenate
-        const processSegment = (segmentIndex) => {
-            return new Promise((segmentResolve, segmentReject) => {
-                const segment = segments[segmentIndex];
-                const tempFileName = `temp_${userId}_${Date.now()}_${segmentIndex}.mp4`;
-                const tempFilePath = path.join(tempDir, tempFileName);
-                tempFiles.push(tempFilePath);
+        const ffmpegProcess = spawn('ffmpeg', args);
+        let stderr = '';
+        let duration = 0;
 
-                let args;
-                if (segment.end === null) {
-                    // From start to end of video
-                    args = [
-                        '-i', inputPath,
-                        '-ss', segment.start.toString(),
-                        '-c', 'copy',
-                        '-avoid_negative_ts', 'make_zero',
-                        '-y',
-                        tempFilePath
-                    ];
-                } else {
-                    // From start to specific end time
-                    const duration = segment.end - segment.start;
-                    args = [
-                        '-i', inputPath,
-                        '-ss', segment.start.toString(),
-                        '-t', duration.toString(),
-                        '-c', 'copy',
-                        '-avoid_negative_ts', 'make_zero',
-                        '-y',
-                        tempFilePath
-                    ];
+        ffmpegProcess.stderr.on('data', (data) => {
+            stderr += data.toString();
+            // console.log('FFmpeg stderr:', data.toString());
+            
+            // Extract duration for progress calculation
+            if (duration === 0) {
+                const durationMatch = data.toString().match(/Duration: (\d{2}):(\d{2}):(\d{2})\./);
+                if (durationMatch) {
+                    const hours = parseInt(durationMatch[1]);
+                    const minutes = parseInt(durationMatch[2]);
+                    const seconds = parseInt(durationMatch[3]);
+                    duration = hours * 3600 + minutes * 60 + seconds;
                 }
-
-                console.log(`Processing segment ${segmentIndex + 1}/${segments.length}:`, args.join(' '));
-
-                const ffmpegProcess = spawn('ffmpeg', args);
-
-                ffmpegProcess.stderr.on('data', (data) => {
-                    console.log(`Segment ${segmentIndex} stderr:`, data.toString());
-                });
-
-                ffmpegProcess.on('close', (code) => {
-                    if (code === 0) {
-                        processedSegments++;
-                        const progress = (processedSegments / (segments.length + 1)) * 80; // 80% for segments, 20% for concat
-                        if (progressCallback) progressCallback(progress);
-                        segmentResolve();
-                    } else {
-                        segmentReject(new Error(`Segment processing failed with code ${code}`));
-                    }
-                });
-
-                ffmpegProcess.on('error', segmentReject);
-            });
-        };
-
-        // Process all segments sequentially
-        const processAllSegments = async () => {
-            try {
-                for (let i = 0; i < segments.length; i++) {
-                    await processSegment(i);
-                }
-
-                // Now concatenate all segments
-                await concatenateSegments(tempFiles, outputPath, progressCallback);
-                
-                // Clean up temp files
-                tempFiles.forEach(file => {
-                    fs.unlink(file, (err) => {
-                        if (err) console.error('Error cleaning up temp file:', err);
-                    });
-                });
-
-                // Clean up input file if it was downloaded
-                if (inputPath.includes('uploads/input_')) {
-                    fs.unlink(inputPath, (err) => {
-                        if (err) console.error('Error cleaning up input file:', err);
-                    });
-                }
-
-                resolve(outputPath);
-            } catch (error) {
-                // Clean up temp files on error
-                tempFiles.forEach(file => {
-                    fs.unlink(file, () => {});
-                });
-                reject(error);
             }
-        };
+            
+            // Extract progress
+            const timeMatch = data.toString().match(/time=(\d{2}):(\d{2}):(\d{2})\./);
+            if (timeMatch && duration > 0 && progressCallback) {
+                const hours = parseInt(timeMatch[1]);
+                const minutes = parseInt(timeMatch[2]);
+                const seconds = parseInt(timeMatch[3]);
+                const currentTime = hours * 3600 + minutes * 60 + seconds;
+                const progress = Math.min((currentTime / duration) * 100, 100);
+                progressCallback(progress);
+            }
+        });
 
-        processAllSegments();
+        ffmpegProcess.on('close', (code) => {
+            console.log(`FFmpeg process exited with code: ${code}`);
+            
+            if (code === 0) {
+                if (fs.existsSync(outputPath)) {
+                    const stats = fs.statSync(outputPath);
+                    if (stats.size > 0) {
+                        console.log(`Final output created: ${outputPath} (${stats.size} bytes)`);
+                        
+                        // Clean up input file if downloaded
+                        if (inputPath.includes('uploads/input_')) {
+                            fs.unlink(inputPath, (err) => {
+                                if (err) console.error('Error cleaning up input file:', err);
+                            });
+                        }
+                        
+                        resolve(outputPath);
+                    } else {
+                        reject(new Error('Final output file is empty'));
+                    }
+                } else {
+                    reject(new Error('Final output file was not created'));
+                }
+            } else {
+                console.error('FFmpeg stderr:', stderr);
+                reject(new Error(`FFmpeg process failed with code ${code}`));
+            }
+        });
+
+        ffmpegProcess.on('error', reject);
     });
 }
 
+function streamProcessedVideoOverSocket(socket, outputPath, progressCallback) {
+    return new Promise((resolve, reject) => {
+        fs.stat(outputPath, (statErr, stats) => {
+            if (statErr) {
+                reject(statErr);
+                return;
+            }
+
+            const fileName = path.basename(outputPath);
+            const totalSize = stats.size;
+            const mimeType = 'video/mp4';
+
+            socket.emit("processed video metadata", {
+                fileName,
+                size: totalSize,
+                mimeType
+            });
+
+            if (totalSize === 0) {
+                if (progressCallback) {
+                    progressCallback(1);
+                }
+
+                socket.emit("processed video chunk", {
+                    fileName,
+                    index: 0,
+                    chunk: null,
+                    isLast: true
+                });
+
+                resolve({ fileName, size: totalSize, mimeType });
+                return;
+            }
+
+            const readStream = fs.createReadStream(outputPath, { highWaterMark: STREAM_CHUNK_SIZE });
+            let bytesSent = 0;
+            let chunkIndex = 0;
+
+            readStream.on('data', (chunk) => {
+                bytesSent += chunk.length;
+
+                if (progressCallback) {
+                    progressCallback(Math.min(bytesSent / totalSize, 1));
+                }
+
+                socket.emit("processed video chunk", {
+                    fileName,
+                    index: chunkIndex++,
+                    chunk: chunk.toString('base64'),
+                    isLast: false
+                });
+            });
+
+            readStream.on('end', () => {
+                socket.emit("processed video chunk", {
+                    fileName,
+                    index: chunkIndex,
+                    chunk: null,
+                    isLast: true
+                });
+
+                resolve({ fileName, size: totalSize, mimeType });
+            });
+
+            readStream.on('error', (streamErr) => {
+                readStream.destroy();
+                reject(streamErr);
+            });
+        });
+    });
+}
+
+// Helper function to create segments to keep (similar to your diarization logic)
+function createSegmentsToKeep(sortedTrims) {
+    const segments = [];
+    let currentStart = 0;
+
+    // Create segments between trims (parts to keep)
+    sortedTrims.forEach((trim) => {
+        if (currentStart < trim.start) {
+            segments.push({
+                start: currentStart,
+                end: trim.start,
+                duration: trim.start - currentStart
+            });
+        }
+        currentStart = trim.end;
+    });
+
+    // Add final segment after last trim (till end of video)
+    segments.push({
+        start: currentStart,
+        end: null, // null means till end
+        duration: null // will be calculated by FFmpeg
+    });
+
+    // Filter out segments that are too short (less than 0.1 seconds)
+    return segments.filter(segment => 
+        segment.end === null || (segment.end - segment.start) >= 0.1
+    );
+}
+
+// Helper function to create filter_complex string for segments
+function createFilterComplexForSegments(segments) {
+    let filterParts = [];
+    let videoOutputs = [];
+    let audioOutputs = [];
+
+    // Create trim filters for each segment
+    segments.forEach((segment, index) => {
+        const segmentLabel = `seg${index}`;
+        
+        if (segment.end === null) {
+            // Segment till end of video
+            filterParts.push(
+                `[0:v]trim=start=${segment.start.toFixed(3)},setpts=PTS-STARTPTS[v${index}]`,
+                `[0:a]atrim=start=${segment.start.toFixed(3)},asetpts=PTS-STARTPTS[a${index}]`
+            );
+        } else {
+            // Segment with specific end time
+            filterParts.push(
+                `[0:v]trim=start=${segment.start.toFixed(3)}:end=${segment.end.toFixed(3)},setpts=PTS-STARTPTS[v${index}]`,
+                `[0:a]atrim=start=${segment.start.toFixed(3)}:end=${segment.end.toFixed(3)},asetpts=PTS-STARTPTS[a${index}]`
+            );
+        }
+        
+        videoOutputs.push(`[v${index}]`);
+        audioOutputs.push(`[a${index}]`);
+    });
+
+    // Concatenate all segments
+    const videoConcat = `${videoOutputs.join('')}concat=n=${segments.length}:v=1:a=0[final_video]`;
+    const audioConcat = `${audioOutputs.join('')}concat=n=${segments.length}:v=0:a=1[final_audio]`;
+    
+    filterParts.push(videoConcat, audioConcat);
+
+    return filterParts.join(';');
+}
 // Helper function to concatenate segments
 function concatenateSegments(tempFiles, outputPath, progressCallback) {
     return new Promise((resolve, reject) => {
@@ -514,9 +690,9 @@ function concatenateSegments(tempFiles, outputPath, progressCallback) {
 
         const ffmpegProcess = spawn('ffmpeg', args);
 
-        ffmpegProcess.stderr.on('data', (data) => {
-            console.log('Concat stderr:', data.toString());
-        });
+        // ffmpegProcess.stderr.on('data', (data) => {
+        //     console.log('Concat stderr:', data.toString());
+        // });
 
         ffmpegProcess.on('close', (code) => {
             // Clean up concat file
