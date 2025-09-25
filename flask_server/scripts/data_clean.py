@@ -2,9 +2,9 @@ import pandas as pd
 import re
 from textblob import TextBlob
 from sentence_transformers import SentenceTransformer
-from constants import qa_data_path
+from config import settings
 
-df = pd.read_csv(qa_data_path)
+df = pd.read_csv(settings.data_paths.qa)
 
 # Remove 'SPEAKER_..' (with optional timestamp, ':', '&', or whitespace) and '&' (with optional timestamp, ':', or whitespace)
 pattern = r"(SPEAKER_\d+(?:\s*\([^)]+\))?[:&]?\s*|&(?:\s*\([^)]+\))?:?\s*)"
@@ -31,4 +31,4 @@ df['question_embedding'] = df['question_text'].apply(lambda x: model.encode(x).t
 df['answer_embedding'] = df['answer_text'].apply(lambda x: model.encode(x).tolist())
 
 print(df.head())
-df.to_csv(qa_data_path, index=False)
+df.to_csv(settings.data_paths.qa, index=False)

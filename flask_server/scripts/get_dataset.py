@@ -5,7 +5,7 @@ from googleapiclient.discovery import build
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import TranscriptsDisabled, NoTranscriptFound
 from textblob import TextBlob
-from constants import base_data_path
+from config import settings
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -83,12 +83,13 @@ def get_video_stats(video_ids):
 
     return result
 
-dataset_path = base_data_path
+dataset_path = settings.data_paths.base
+os.makedirs(dataset_path.parent, exist_ok=True)
 
 # Load existing video_ids if file exists
 existing_ids = set()
-if os.path.exists(dataset_path):
-    with open(dataset_path, "r", encoding='utf-8') as f:
+if dataset_path.exists():
+    with dataset_path.open("r", encoding='utf-8') as f:
         reader = csv.DictReader(f)
         for row in reader:
             existing_ids.add(row['video_id'])
@@ -100,10 +101,10 @@ fieldnames = [
     'views', 'likes', 'comments', 'transcript_text', 'transcript_sentiment'
 ]
 
-with open(dataset_path, "a", newline='', encoding='utf-8') as f:
+with dataset_path.open("a", newline='', encoding='utf-8') as f:
     writer = csv.DictWriter(f, fieldnames=fieldnames)
     # Write header only if file is empty
-    if os.stat(dataset_path).st_size == 0:
+    if dataset_path.stat().st_size == 0:
         writer.writeheader()
 
     while len(videos_data) < max_results:
