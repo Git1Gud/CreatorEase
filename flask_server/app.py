@@ -221,6 +221,7 @@ def multicam_slide():
                 model_name=model_size,
                 device=device,
                 compute_type="float16" if device == "cuda" else "int8",
+                expected_speakers=2
             )
             print(words)
         except Exception as e:
@@ -248,8 +249,8 @@ def multicam_slide():
         )
     except Exception as e:
         return jsonify({"error": f"Multicam assembly failed: {e}"}), 500
-    # final_output=os.path.join(UPLOAD_FOLDER, f"output_with_captions.mp4")
-    # add_dynamic_subtitles_to_video(video_path=output_path,words_with_timestamps=words,output_path=final_output)
+    final_output=os.path.join(UPLOAD_FOLDER, f"output_with_captions.mp4")
+    add_dynamic_subtitles_to_video(video_path=output_path,words_with_timestamps=words,output_path=final_output)
     # end_url=upload_video(final_output)
     end_url= r'http://res.cloudinary.com/dxt0biqah/video/upload/v1757411328/videos/swgfyxrttojxrjuqcdv4.mp4'
     return jsonify({"message": "OK", "output": end_url})

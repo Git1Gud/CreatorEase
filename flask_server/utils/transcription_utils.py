@@ -43,18 +43,14 @@ def transcribe_audio_with_whisperx(
             diarize_model = whisperx.diarize.DiarizationPipeline(
                 use_auth_token=hf_token,
                 device=device,
-                chunk_size=30000,          # 30 s chunks
-                vad_onset=0.6,             # tighten speech onset
-                vad_offset=0.4,
-                vad_threshold=0.65,
-                min_speakers=expected_speakers or 1,
-                max_speakers=expected_speakers or 5,
             )
-            diarize_segments = diarize_model(
-                audio_file,
-                min_segment_length=0.5,
-                energy_threshold=0.2,
-            )
+            diarize_kwargs = {}
+            if expected_speakers:
+                diarize_kwargs["num_speakers"] = expected_speakers
+            else:
+                diarize_kwargs["min_speakers"] = 1
+                diarize_kwargs["max_speakers"] = 4
+            diarize_segments = diarize_model(audio_file, **diarize_kwargs)
             if expected_speakers:
                 print(f"Forced diarization to {expected_speakers} speakers.")
             result = whisperx.assign_word_speakers(diarize_segments, result)

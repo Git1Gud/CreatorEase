@@ -32,6 +32,32 @@ def _norm_speaker(s: str) -> str:
     return "speaker_00"
 
 
+def _remap_speakers_in_order(words: List[Dict]) -> Tuple[List[Dict], Dict[str, str]]:
+    """Assign sequential speaker IDs (speaker_00, speaker_01, ...) based on first occurrence order."""
+    if not words:
+        return words, {}
+
+    mapping: Dict[str, str] = {}
+    normalized_words: List[Dict] = []
+    next_index = 0
+
+    for word in sorted(words, key=lambda w: w.get("start", 0.0)):
+        raw_label = word.get("speaker")
+        key = (raw_label or "").strip()
+        if not key:
+            key = "__unknown__"
+        if key not in mapping:
+            mapping[key] = f"speaker_{next_index:02d}"
+            next_index += 1
+
+        canonical = mapping[key]
+        normalized_word = dict(word)
+        normalized_word["speaker"] = canonical
+        normalized_words.append(normalized_word)
+
+    return normalized_words, mapping
+
+
 def _words_to_speaker_segments(words: List[Dict]) -> List[Tuple[float, float, str]]:
     """Collapse word-level timestamps with speakers into contiguous (start, end, speaker) segments.
     Assumes words are sorted by start time.
@@ -363,6 +389,12 @@ def combine_multicam_with_slide(
             video_duration = min(left.duration, right.duration)
 
         # 3) Collapse to speaker-change segments
+        speaker_sequence_map: Dict[str, str] = {}
+        if words:
+            words, speaker_sequence_map = _remap_speakers_in_order(words)
+            if speaker_sequence_map:
+                print("Speaker order mapping:", speaker_sequence_map)
+
         segs = _words_to_speaker_segments(words) if words else []
 
         # If no segments (no words), default to whole video with speaker_00
