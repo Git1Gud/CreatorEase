@@ -1,6 +1,7 @@
 import os
 import gc
 import whisperx
+from typing import Optional
 
 def check_gpu_availability():
     try:
@@ -9,7 +10,14 @@ def check_gpu_availability():
     except ImportError:
         return "cpu"
 
-def transcribe_audio_with_whisperx(audio_file, model_name="tiny", device=None, compute_type="float16", batch_size=16):
+def transcribe_audio_with_whisperx(
+    audio_file,
+    model_name="tiny",
+    device=None,
+    compute_type="float16",
+    batch_size=16,
+    expected_speakers: Optional[int] = None,
+):
     if device is None:
         device = check_gpu_availability()
     try:
@@ -29,11 +37,27 @@ def transcribe_audio_with_whisperx(audio_file, model_name="tiny", device=None, c
         if device == "cuda":
             import torch; torch.cuda.empty_cache()
         try:
-            if os.getenv('HUGGINGFACE_TOKEN'):
-                print("Identifying speakers...")
-                diarize_model = whisperx.diarize.DiarizationPipeline(use_auth_token=os.getenv('HUGGINGFACE_TOKEN'), device=device)
-                diarize_segments = diarize_model(audio)
-                result = whisperx.assign_word_speakers(diarize_segments, result)
+            hf_token = os.getenv("HUGGINGFACE_TOKEN")
+            if not hf_token:
+                print("Warning: HUGGINGFACE_TOKEN missing; diarization will use lightweight checkpoint.")
+            diarize_model = whisperx.diarize.DiarizationPipeline(
+                use_auth_token=hf_token,
+                device=device,
+                chunk_size=30000,          # 30 s chunks
+                vad_onset=0.6,             # tighten speech onset
+                vad_offset=0.4,
+                vad_threshold=0.65,
+                min_speakers=expected_speakers or 1,
+                max_speakers=expected_speakers or 5,
+            )
+            diarize_segments = diarize_model(
+                audio_file,
+                min_segment_length=0.5,
+                energy_threshold=0.2,
+            )
+            if expected_speakers:
+                print(f"Forced diarization to {expected_speakers} speakers.")
+            result = whisperx.assign_word_speakers(diarize_segments, result)
         except Exception as e:
             print(f"Speaker diarization failed: {e}. Continuing without speaker labels.")
         words_with_timestamps = []

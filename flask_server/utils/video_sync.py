@@ -3,7 +3,7 @@ import uuid
 import subprocess
 import tempfile
 from dataclasses import dataclass
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Optional
 
 import numpy as np
 import librosa
@@ -24,10 +24,12 @@ class VideoSyncError(Exception):
 
 @dataclass
 class SyncResult:
-	output_path: str
+	output_path: Optional[str]
 	target_fps: float
 	offsets: Dict[str, float]
 	t0: float
+	aligned_video_paths: Tuple[str, str]
+	aligned_audio_path: str
 
 
 def _run_ffmpeg(args, *, check: bool = True):
@@ -108,17 +110,21 @@ def _prepare_inputs(video1_path: str, video2_path: str, audio_path: str, target_
 	return video1_cfr, video2_cfr, audio_ref, video1_audio, video2_audio
 
 
-def _align_and_stitch(video1_path: str, video2_path: str, audio_path: str,
-					  offsets: Tuple[float, float], output_path: str,
-					  target_fps: float) -> SyncResult:
-	"""Build a side-by-side composite synchronized to the reference audio."""
+def _align_and_export(video1_path: str, video2_path: str, audio_path: str,
+					  offsets: Tuple[float, float], output_dir: str,
+					  target_fps: float, generate_stitched: bool,
+					  stitched_output_path: Optional[str]) -> SyncResult:
+	"""Export aligned individual clips (and optional stitched composite)."""
 	lag_v1, lag_v2 = offsets
+	t0 = max(0.0, -lag_v1, -lag_v2)
+
+	aligned_dir = os.path.join(output_dir, "aligned_assets")
+	os.makedirs(aligned_dir, exist_ok=True)
 
 	with VideoFileClip(video1_path) as v1, VideoFileClip(video2_path) as v2, AudioFileClip(audio_path) as ref_audio:
 		if v1.duration is None or v2.duration is None or ref_audio.duration is None:
 			raise VideoSyncError("Unable to determine clip durations for stitching.")
 
-		t0 = max(0.0, -lag_v1, -lag_v2)
 		v1_start = max(0.0, t0 + lag_v1)
 		v2_start = max(0.0, t0 + lag_v2)
 
@@ -135,16 +141,12 @@ def _align_and_stitch(video1_path: str, video2_path: str, audio_path: str,
 		v2_clip = v2.subclip(v2_start, v2_start + max_duration)
 		audio_clip = ref_audio.subclip(t0, t0 + max_duration)
 
-		target_height = min(v1_clip.h, v2_clip.h)
-		v1_resized = v1_clip.resize(height=target_height)
-		v2_resized = v2_clip.resize(height=target_height)
+		aligned_left_path = os.path.join(aligned_dir, f"aligned_video1_{uuid.uuid4().hex}.mp4")
+		aligned_right_path = os.path.join(aligned_dir, f"aligned_video2_{uuid.uuid4().hex}.mp4")
+		aligned_audio_path = os.path.join(aligned_dir, f"aligned_audio_{uuid.uuid4().hex}.wav")
 
-		final_clip = clips_array([[v1_resized, v2_resized]])
-		final_clip = final_clip.set_audio(audio_clip).set_fps(target_fps)
-
-		os.makedirs(os.path.dirname(output_path), exist_ok=True)
-		final_clip.write_videofile(
-			output_path,
+		v1_clip.write_videofile(
+			aligned_left_path,
 			codec="libx264",
 			audio_codec="aac",
 			fps=target_fps,
@@ -152,24 +154,60 @@ def _align_and_stitch(video1_path: str, video2_path: str, audio_path: str,
 			logger=None,
 		)
 
-		final_clip.close()
+		v2_clip.write_videofile(
+			aligned_right_path,
+			codec="libx264",
+			audio_codec="aac",
+			fps=target_fps,
+			verbose=False,
+			logger=None,
+		)
+
+		audio_clip.write_audiofile(aligned_audio_path, fps=int(audio_clip.fps or 44100), logger=None)
+
+		stitched_path = None
+		if generate_stitched:
+			target_height = min(v1_clip.h, v2_clip.h)
+			v1_resized = v1_clip.resize(height=target_height)
+			v2_resized = v2_clip.resize(height=target_height)
+
+			final_clip = clips_array([[v1_resized, v2_resized]])
+			final_clip = final_clip.set_audio(audio_clip).set_fps(target_fps)
+
+			stitched_path = stitched_output_path or os.path.join(output_dir, f"synced_{uuid.uuid4().hex}.mp4")
+			final_clip.write_videofile(
+				stitched_path,
+				codec="libx264",
+				audio_codec="aac",
+				fps=target_fps,
+				verbose=False,
+				logger=None,
+			)
+			final_clip.close()
+			v1_resized.close()
+			v2_resized.close()
+
 		v1_clip.close()
 		v2_clip.close()
 		audio_clip.close()
 
 	return SyncResult(
-		output_path=output_path,
+		output_path=stitched_path,
 		target_fps=target_fps,
 		offsets={"video1": lag_v1, "video2": lag_v2},
 		t0=t0,
+		aligned_video_paths=(aligned_left_path, aligned_right_path),
+		aligned_audio_path=aligned_audio_path,
 	)
 
 
 def sync_videos_with_reference_audio(video1_path: str, video2_path: str, audio_path: str,
 									 output_dir: str, target_fps: float = 30.0,
 									 corr_sr: int = 8000, max_shift_s: float = 10.0,
-									 max_seconds: float = 60.0) -> SyncResult:
-	"""Full pipeline: CFR conversion, correlation, and stitched output."""
+									 max_seconds: float = 60.0,
+									 generate_stitched: bool = True,
+									 stitched_filename: Optional[str] = None) -> SyncResult:
+	"""Full pipeline: CFR conversion, correlation, and exported assets."""
 	if not os.path.exists(video1_path) or not os.path.exists(video2_path) or not os.path.exists(audio_path):
 		raise VideoSyncError("One or more input files do not exist.")
 
@@ -181,19 +219,21 @@ def sync_videos_with_reference_audio(video1_path: str, video2_path: str, audio_p
 		)
 
 		lag_v1 = calculate_time_lag(audio_ref, video1_audio, corr_sr=corr_sr,
-									 max_shift_s=max_shift_s, max_seconds=max_seconds)
+									  max_shift_s=max_shift_s, max_seconds=max_seconds)
 		lag_v2 = calculate_time_lag(audio_ref, video2_audio, corr_sr=corr_sr,
-									 max_shift_s=max_shift_s, max_seconds=max_seconds)
+									  max_shift_s=max_shift_s, max_seconds=max_seconds)
 
-		output_path = os.path.join(output_dir, f"synced_{uuid.uuid4().hex}.mp4")
+		stitched_path = stitched_filename if generate_stitched else None
 
-		result = _align_and_stitch(
+		result = _align_and_export(
 			video1_cfr,
 			video2_cfr,
 			audio_path,
 			(lag_v1, lag_v2),
-			output_path,
-			target_fps,
+			output_dir=output_dir,
+			target_fps=target_fps,
+			generate_stitched=generate_stitched,
+			stitched_output_path=stitched_path,
 		)
 
 	return result

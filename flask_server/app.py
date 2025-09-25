@@ -156,11 +156,65 @@ def multicam_slide():
     right_file.save(right_path)
     audio_file.save(audio_path)
 
-    # Auto-generate words JSON using your transcription utility on the provided audio
+    # Optional pre-sync step to align videos and audio before multicam composition
+    sync_enabled = request.form.get('sync_first', 'true').lower() != 'false'
+    sync_result = None
+    if sync_enabled:
+        sync_target_fps = float(request.form.get('sync_target_fps', 30.0))
+        sync_corr_sr = int(request.form.get('sync_corr_sr', 8000))
+        sync_max_shift = float(request.form.get('sync_max_shift', 10.0))
+        sync_max_seconds = float(request.form.get('sync_max_seconds', 60.0))
 
+        sync_job_dir = os.path.join(MULTICAM_FOLDER, f"sync_{uuid.uuid4().hex}")
+        os.makedirs(sync_job_dir, exist_ok=True)
+
+        try:
+            sync_result = sync_videos_with_reference_audio(
+                left_path,
+                right_path,
+                audio_path,
+                output_dir=sync_job_dir,
+                target_fps=sync_target_fps,
+                corr_sr=sync_corr_sr,
+                max_shift_s=sync_max_shift,
+                max_seconds=sync_max_seconds,
+                generate_stitched=False,
+            )
+        except VideoSyncError as exc:
+            return jsonify({"error": f"Sync step failed: {exc}"}), 400
+        except Exception as exc:
+            return jsonify({"error": f"Unexpected sync failure: {exc}"}), 500
+
+        left_path, right_path = sync_result.aligned_video_paths
+        audio_path = sync_result.aligned_audio_path
+
+    # Auto-generate words JSON using the (possibly trimmed) audio
     if 'word_json' in request.form:
-        words=json.loads(request.form.get('word_json'))
-    else :
+        try:
+            incoming_words = json.loads(request.form.get('word_json'))
+        except Exception as e:
+            return jsonify({"error": f"Invalid word_json: {e}"}), 400
+
+        if sync_result and sync_result.t0:
+            adjusted = []
+            trim_offset = sync_result.t0
+            for w in incoming_words:
+                try:
+                    start = float(w.get('start', 0.0)) - trim_offset
+                    end = float(w.get('end', 0.0)) - trim_offset
+                except (TypeError, ValueError):
+                    continue
+                if end <= 0:
+                    continue
+                adjusted.append({
+                    **w,
+                    'start': max(0.0, start),
+                    'end': max(0.0, end),
+                })
+            words = adjusted
+        else:
+            words = incoming_words
+    else:
         try:
             words = transcribe_audio_with_whisperx(
                 audio_path,
@@ -190,13 +244,14 @@ def multicam_slide():
             output_path=output_path,
             direction=direction,
             overlap=overlap,
+            auto_sync=not bool(sync_result),
         )
     except Exception as e:
         return jsonify({"error": f"Multicam assembly failed: {e}"}), 500
-    final_output=os.path.join(UPLOAD_FOLDER, f"output_with_captions.mp4")
-    add_dynamic_subtitles_to_video(video_path=output_path,words_with_timestamps=words,output_path=final_output)
-    end_url=upload_video(final_output)
-    # end_url= r'http://res.cloudinary.com/dxt0biqah/video/upload/v1757411328/videos/swgfyxrttojxrjuqcdv4.mp4'
+    # final_output=os.path.join(UPLOAD_FOLDER, f"output_with_captions.mp4")
+    # add_dynamic_subtitles_to_video(video_path=output_path,words_with_timestamps=words,output_path=final_output)
+    # end_url=upload_video(final_output)
+    end_url= r'http://res.cloudinary.com/dxt0biqah/video/upload/v1757411328/videos/swgfyxrttojxrjuqcdv4.mp4'
     return jsonify({"message": "OK", "output": end_url})
 
 
@@ -252,6 +307,8 @@ def sync_videos():
     video2_path = _save_with_prefix('video2', video2_file)
     audio_path = _save_with_prefix('audio', audio_file)
 
+    stitched_output_path = os.path.join(job_dir, f"synced_{uuid.uuid4().hex}.mp4")
+
     try:
         result = sync_videos_with_reference_audio(
             video1_path,
@@ -262,23 +319,44 @@ def sync_videos():
             corr_sr=corr_sr,
             max_shift_s=max_shift,
             max_seconds=max_seconds,
+            generate_stitched=True,
+            stitched_filename=stitched_output_path,
         )
     except VideoSyncError as exc:
         return jsonify({"error": str(exc)}), 400
     except Exception as exc:
         return jsonify({"error": f"Sync failed: {exc}"}), 500
 
-    relative_output = os.path.relpath(result.output_path, start=os.getcwd())
-
-    return jsonify({
+    response_payload = {
         "message": "Sync completed",
-        "output": result.output_path,
-        "output_relative": relative_output,
         "offsets": result.offsets,
         "target_fps": result.target_fps,
         "timeline_start": result.t0,
         "job_id": job_id,
-    })
+        "aligned_videos": {
+            "video1": result.aligned_video_paths[0],
+            "video2": result.aligned_video_paths[1],
+        },
+        "aligned_audio": result.aligned_audio_path,
+    }
+
+    try:
+        response_payload["aligned_videos_relative"] = {
+            "video1": os.path.relpath(result.aligned_video_paths[0], start=os.getcwd()),
+            "video2": os.path.relpath(result.aligned_video_paths[1], start=os.getcwd()),
+        }
+        response_payload["aligned_audio_relative"] = os.path.relpath(result.aligned_audio_path, start=os.getcwd())
+    except ValueError:
+        pass
+
+    if result.output_path:
+        try:
+            response_payload["output_relative"] = os.path.relpath(result.output_path, start=os.getcwd())
+        except ValueError:
+            pass
+        response_payload["output"] = result.output_path
+
+    return jsonify(response_payload)
 
 
 @app.route('/health', methods=['GET'])
