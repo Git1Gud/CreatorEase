@@ -5,9 +5,14 @@ from utils.caption_utils import add_dynamic_subtitles_to_video
 from utils.transcription_utils import transcribe_audio_with_whisperx
 from utils.multicam import combine_multicam_with_slide
 from utils.cloudinary_utils import upload_video
+from utils.video_sync import (
+    sync_videos_with_reference_audio,
+    VideoSyncError,
+)
 import os
 import time
 import json
+import uuid
 
 app = Flask(__name__)
 CORS(app) # Enable CORS for all origins
@@ -17,6 +22,8 @@ UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 MULTICAM_FOLDER = os.path.join(UPLOAD_FOLDER, "multicam")
 os.makedirs(MULTICAM_FOLDER, exist_ok=True)
+SYNC_FOLDER = os.path.join(UPLOAD_FOLDER, "sync")
+os.makedirs(SYNC_FOLDER, exist_ok=True)
 
 @app.route('/process_video', methods=['POST'])
 def process_video():
@@ -191,6 +198,88 @@ def multicam_slide():
     end_url=upload_video(final_output)
     # end_url= r'http://res.cloudinary.com/dxt0biqah/video/upload/v1757411328/videos/swgfyxrttojxrjuqcdv4.mp4'
     return jsonify({"message": "OK", "output": end_url})
+
+
+@app.route('/sync_videos', methods=['POST'])
+def sync_videos():
+    required_fields = {'video1', 'video2', 'audio'}
+    if not request.files:
+        return jsonify({
+            "error": "No files found in request. Ensure you're sending multipart/form-data with fields: video1, video2, audio."
+        }), 400
+
+    missing = []
+    for field in sorted(required_fields):
+        storage = request.files.get(field)
+        if storage is None or storage.filename == '':
+            missing.append(field)
+
+    if missing:
+        return jsonify({
+            "error": f"Missing or empty file fields: {', '.join(missing)}",
+            "received_fields": list(request.files.keys()),
+        }), 400
+
+    video1_file = request.files['video1']
+    video2_file = request.files['video2']
+    audio_file = request.files['audio']
+
+    try:
+        target_fps = float(request.form.get('target_fps', 30.0))
+        corr_sr = int(request.form.get('corr_sr', 8000))
+        max_shift = float(request.form.get('max_shift', 10.0))
+        max_seconds = float(request.form.get('max_seconds', 60.0))
+    except ValueError as exc:
+        return jsonify({"error": f"Invalid numeric parameter: {exc}"}), 400
+
+    if target_fps <= 0:
+        return jsonify({"error": "target_fps must be positive"}), 400
+    if corr_sr <= 0:
+        return jsonify({"error": "corr_sr must be positive"}), 400
+
+    job_id = uuid.uuid4().hex
+    job_dir = os.path.join(SYNC_FOLDER, job_id)
+    os.makedirs(job_dir, exist_ok=True)
+
+    def _save_with_prefix(prefix: str, storage):
+        filename = storage.filename or f"{prefix}.mp4"
+        safe_name = f"{prefix}_{os.path.basename(filename)}"
+        path = os.path.join(job_dir, safe_name)
+        storage.save(path)
+        return path
+
+    video1_path = _save_with_prefix('video1', video1_file)
+    video2_path = _save_with_prefix('video2', video2_file)
+    audio_path = _save_with_prefix('audio', audio_file)
+
+    try:
+        result = sync_videos_with_reference_audio(
+            video1_path,
+            video2_path,
+            audio_path,
+            output_dir=job_dir,
+            target_fps=target_fps,
+            corr_sr=corr_sr,
+            max_shift_s=max_shift,
+            max_seconds=max_seconds,
+        )
+    except VideoSyncError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"error": f"Sync failed: {exc}"}), 500
+
+    relative_output = os.path.relpath(result.output_path, start=os.getcwd())
+
+    return jsonify({
+        "message": "Sync completed",
+        "output": result.output_path,
+        "output_relative": relative_output,
+        "offsets": result.offsets,
+        "target_fps": result.target_fps,
+        "timeline_start": result.t0,
+        "job_id": job_id,
+    })
+
 
 @app.route('/health', methods=['GET'])
 def health_check():
