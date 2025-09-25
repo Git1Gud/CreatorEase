@@ -17,6 +17,7 @@ from utils.caption_utils import add_dynamic_subtitles_to_video
 from utils.multicam import combine_multicam_with_slide
 from utils.transcription_utils import transcribe_audio_with_whisperx
 from utils.video_sync import VideoSyncError, sync_videos_with_reference_audio
+from utils.cloudinary_utils import upload_video
 
 multicam_bp = Blueprint("multicam", __name__)
 
@@ -155,5 +156,5 @@ def multicam_slide():
         )
     except Exception as exc:
         return jsonify({"error": f"Failed to render subtitles: {exc}"}), 500
-
+    final_url=upload_video(caption_output)
     return jsonify({"message": "OK", "output": settings.sample_delivery_url})

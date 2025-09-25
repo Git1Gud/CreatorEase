@@ -42,7 +42,7 @@ class Settings:
     sync_folder: Path = Path("uploads") / "sync"
     caption_output_filename: str = "output_with_captions.mp4"
     sample_delivery_url: str = (
-        "http://res.cloudinary.com/dxt0biqah/video/upload/v1757411328/videos/swgfyxrttojxrjuqcdv4.mp4"
+        "http://res.cloudinary.com/dxt0biqah/video/upload/v1758811700/videos/clvcuwbqvemtw6bbzwau.mp4"
     )
     defaults: RouteDefaults = field(default_factory=RouteDefaults)
     sync_defaults: SyncDefaults = field(default_factory=SyncDefaults)

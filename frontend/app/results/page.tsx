@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Download, Maximize } from "lucide-react"
+import { ArrowLeft, Download, Maximize, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 
@@ -14,12 +14,16 @@ export default function ResultsPage() {
   useEffect(() => {
     // Get the original video and clips from localStorage
     const savedOriginalVideo = localStorage.getItem("originalVideo")
-    const clip1 = localStorage.getItem("clip1")
-    const clip2 = localStorage.getItem("clip2")
-    const clip3 = localStorage.getItem("clip3")
-
-    // Default video URL in case localStorage is empty
-    const defaultVideoUrl = "https://zaidcre.s3.us-east-1.amazonaws.com/Screen+Recording+2025-04-23+235956.mp4"
+    let clipUrls: string[] = []
+    const storedClips = localStorage.getItem("clipUrls")
+    if (storedClips) {
+      try {
+        const parsed = JSON.parse(storedClips)
+        clipUrls = Array.isArray(parsed) ? parsed : []
+      } catch (parseError) {
+        console.warn("Failed to parse clip URLs from storage", parseError)
+      }
+    }
 
     if (savedOriginalVideo) {
       setOriginalVideo(savedOriginalVideo)
@@ -29,21 +33,17 @@ export default function ResultsPage() {
       return
     }
 
-    // Set the clips with the retrieved URLs or fallback to the default URL
-    setClips([
-      {
-        url: clip1 || defaultVideoUrl,
-        name: "Clip_1.mp4",
-      },
-      {
-        url: clip2 || defaultVideoUrl,
-        name: "Clip_2.mp4",
-      },
-      {
-        url: clip3 || defaultVideoUrl,
-        name: "Clip_3.mp4",
-      },
-    ])
+    if (!clipUrls.length) {
+      router.push("/clipper")
+      return
+    }
+
+    setClips(
+      clipUrls.map((url: string, index: number) => ({
+        url,
+        name: `Clip_${index + 1}.mp4`,
+      }))
+    )
   }, [router])
 
   const handleBackClick = () => {
@@ -79,7 +79,10 @@ export default function ResultsPage() {
         <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">
           Your Generated Clips
         </h1>
-        <p className="text-gray-400 mt-2">Here are the 3 optimized clips generated from your video</p>
+        <p className="text-gray-400 mt-2 flex items-center justify-center gap-2">
+          <Sparkles className="h-4 w-4 text-purple-300" />
+          Here are the top-performing segments generated from your upload
+        </p>
       </header>
 
       <div className="grid gap-8">
@@ -107,45 +110,44 @@ export default function ResultsPage() {
         <Card className="bg-gray-900 border-gray-800">
           <CardContent className="p-6">
             <h2 className="text-xl font-semibold mb-6">Generated Clips</h2>
-
-            <div className="grid gap-8 md:grid-cols-3">
-              {clips.map((clip, index) => (
-                <div key={index} className="space-y-4">
-                  <div className="aspect-video bg-black rounded-lg overflow-hidden">
-                    <video
-                      id={`clip-${index}`}
-                      src={clip.url}
-                      className="w-full h-full"
-                      controls
-                      // poster="/placeholder.svg?height=720&width=1280"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Clip {index + 1}</span>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1"
-                        onClick={() => handleFullscreen(`clip-${index}`)}
-                      >
-                        <Maximize className="h-4 w-4" />
-                        Fullscreen
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1"
-                        onClick={() => handleDownload(clip.url, clip.name)}
-                      >
-                        <Download className="h-4 w-4" />
-                        Download
-                      </Button>
+            {clips.length ? (
+              <div className="grid gap-8 md:grid-cols-3">
+                {clips.map((clip, index) => (
+                  <div key={index} className="space-y-4">
+                    <div className="aspect-video bg-black rounded-lg overflow-hidden">
+                      <video id={`clip-${index}`} src={clip.url} className="w-full h-full" controls />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Clip {index + 1}</span>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1"
+                          onClick={() => handleFullscreen(`clip-${index}`)}
+                        >
+                          <Maximize className="h-4 w-4" />
+                          Fullscreen
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1"
+                          onClick={() => handleDownload(clip.url, clip.name)}
+                        >
+                          <Download className="h-4 w-4" />
+                          Download
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-gray-700 p-8 text-center text-gray-500">
+                No clips available for download. Please process a video on the clipper page first.
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
