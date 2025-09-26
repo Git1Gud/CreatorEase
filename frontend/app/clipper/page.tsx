@@ -17,6 +17,7 @@ export default function ClipperPage() {
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
 
+  const flaskBaseUrl = (process.env.NEXT_PUBLIC_FLASK_BASE_URL ?? "http://localhost:5000").replace(/\/$/, "")
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
     if (selectedFile && selectedFile.type.startsWith("video/")) {
@@ -55,7 +56,7 @@ export default function ClipperPage() {
       const formData = new FormData()
       formData.append("file", file)
 
-      const response = await fetch("http://localhost:5000/process_video", {
+  const response = await fetch(`${flaskBaseUrl}/process_video`, {
         method: "POST",
         body: formData,
       })

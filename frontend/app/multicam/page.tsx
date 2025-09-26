@@ -35,7 +35,7 @@ export default function MulticamPage() {
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [outputUrl, setOutputUrl] = useState<string | null>(null)
-
+  const flaskBaseUrl = (process.env.NEXT_PUBLIC_FLASK_BASE_URL ?? "http://localhost:5000").replace(/\/$/, "")
   const handleFile = (setter: (file: File | null) => void) =>
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0] ?? null
@@ -70,7 +70,7 @@ export default function MulticamPage() {
       formData.append("overlap", String(overlap[0] / 100))
       formData.append("sync_first", String(syncFirst))
 
-      const response = await fetch("http://localhost:5000/multicam_slide", {
+  const response = await fetch(`${flaskBaseUrl}/multicam_slide`, {
         method: "POST",
         body: formData,
       })

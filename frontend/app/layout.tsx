@@ -3,7 +3,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 
 export const metadata = {
-  title: "Video Clipper",
+  title: "CreatorEase",
   description: "Upload videos and get optimized clips in return",
     generator: 'v0.dev'
 }
