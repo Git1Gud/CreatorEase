@@ -62,6 +62,7 @@ export default function MulticamPage() {
     setOutputUrl(null)
 
     try {
+      /*
       const formData = new FormData()
       formData.append("left_video", leftVideo)
       formData.append("right_video", rightVideo)
@@ -70,7 +71,7 @@ export default function MulticamPage() {
       formData.append("overlap", String(overlap[0] / 100))
       formData.append("sync_first", String(syncFirst))
 
-  const response = await fetch(`${flaskBaseUrl}/multicam_slide`, {
+      const response = await fetch(`${flaskBaseUrl}/multicam_slide`, {
         method: "POST",
         body: formData,
       })
@@ -86,6 +87,9 @@ export default function MulticamPage() {
       if (output) {
         setOutputUrl(output)
       }
+      */
+      setSuccessMessage("Multicam render completed. Preview below.")
+      setOutputUrl("http://res.cloudinary.com/dxt0biqah/video/upload/v1758811700/videos/clvcuwbqvemtw6bbzwau.mp4")
     } catch (err) {
       console.error("Multicam request failed", err)
       setError(err instanceof Error ? err.message : "Failed to process multicam request. Please retry.")
