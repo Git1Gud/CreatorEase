@@ -61,7 +61,7 @@ def multicam_slide():
     audio_path = save_upload(audio_file, settings.multicam_folder, "audio")
 
     sync_result = None
-    if parse_boolean(request.form.get("sync_first"), default=True):
+    if parse_boolean(request.form.get("sync_first"), default=False):
         sync_defaults = settings.sync_defaults
         sync_target_fps = parse_numeric(
             request.form.get("sync_target_fps"),
