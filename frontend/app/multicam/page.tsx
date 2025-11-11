@@ -138,55 +138,76 @@ export default function MulticamPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-6 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="left-video" className="flex items-center gap-2 text-neutral-300">
-                    <Upload className="h-4 w-4 text-neutral-500" /> Left camera feed
+                <div className="space-y-3">
+                  <Label htmlFor="left-video" className="flex items-center gap-2 text-sm font-medium text-neutral-200">
+                    <Upload className="h-4 w-4 text-neutral-400" /> Left camera feed
                   </Label>
-                  <input
-                    id="left-video"
-                    type="file"
-                    accept="video/*"
-                    onChange={(event) => {
-                      handleFile(setLeftVideo)(event)
-                      resetOutput()
-                    }}
-                    className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-700"
-                  />
-                  {leftVideo && <p className="text-xs text-neutral-600">{leftVideo.name}</p>}
+                  <div className="relative group">
+                    <input
+                      id="left-video"
+                      type="file"
+                      accept="video/*"
+                      onChange={(event) => {
+                        handleFile(setLeftVideo)(event)
+                        resetOutput()
+                      }}
+                      className="w-full cursor-pointer rounded-lg border border-neutral-800 bg-neutral-900/50 px-4 py-3 text-sm text-neutral-300 transition-all duration-200 file:mr-4 file:cursor-pointer file:rounded-md file:border-0 file:bg-neutral-800 file:px-4 file:py-2 file:text-sm file:font-medium file:text-neutral-200 hover:border-neutral-700 hover:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-700 focus:ring-offset-2 focus:ring-offset-black"
+                    />
+                    {leftVideo && (
+                      <div className="mt-2 flex items-center gap-2 rounded-md bg-neutral-900/80 px-3 py-2 text-xs">
+                        <Video className="h-3 w-3 text-green-500" />
+                        <span className="text-neutral-400">{leftVideo.name}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="right-video" className="flex items-center gap-2 text-neutral-300">
-                    <Upload className="h-4 w-4 text-neutral-500" /> Right camera feed
+                <div className="space-y-3">
+                  <Label htmlFor="right-video" className="flex items-center gap-2 text-sm font-medium text-neutral-200">
+                    <Upload className="h-4 w-4 text-neutral-400" /> Right camera feed
                   </Label>
-                  <input
-                    id="right-video"
-                    type="file"
-                    accept="video/*"
-                    onChange={(event) => {
-                      handleFile(setRightVideo)(event)
-                      resetOutput()
-                    }}
-                    className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-700"
-                  />
-                  {rightVideo && <p className="text-xs text-neutral-600">{rightVideo.name}</p>}
+                  <div className="relative group">
+                    <input
+                      id="right-video"
+                      type="file"
+                      accept="video/*"
+                      onChange={(event) => {
+                        handleFile(setRightVideo)(event)
+                        resetOutput()
+                      }}
+                      className="w-full cursor-pointer rounded-lg border border-neutral-800 bg-neutral-900/50 px-4 py-3 text-sm text-neutral-300 transition-all duration-200 file:mr-4 file:cursor-pointer file:rounded-md file:border-0 file:bg-neutral-800 file:px-4 file:py-2 file:text-sm file:font-medium file:text-neutral-200 hover:border-neutral-700 hover:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-700 focus:ring-offset-2 focus:ring-offset-black"
+                    />
+                    {rightVideo && (
+                      <div className="mt-2 flex items-center gap-2 rounded-md bg-neutral-900/80 px-3 py-2 text-xs">
+                        <Video className="h-3 w-3 text-green-500" />
+                        <span className="text-neutral-400">{rightVideo.name}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="reference-audio" className="flex items-center gap-2 text-neutral-300">
-                  <Waves className="h-4 w-4 text-neutral-500" /> Reference audio track
+              <div className="space-y-3">
+                <Label htmlFor="reference-audio" className="flex items-center gap-2 text-sm font-medium text-neutral-200">
+                  <Waves className="h-4 w-4 text-neutral-400" /> Reference audio track
                 </Label>
-                <input
-                  id="reference-audio"
-                  type="file"
-                  accept="audio/*,video/*"
-                  onChange={(event) => {
-                    handleFile(setReferenceAudio)(event)
-                    resetOutput()
-                  }}
-                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-700"
-                />
-                {referenceAudio && <p className="text-xs text-neutral-600">{referenceAudio.name}</p>}
+                <div className="relative group">
+                  <input
+                    id="reference-audio"
+                    type="file"
+                    accept="audio/*,video/*"
+                    onChange={(event) => {
+                      handleFile(setReferenceAudio)(event)
+                      resetOutput()
+                    }}
+                    className="w-full cursor-pointer rounded-lg border border-neutral-800 bg-neutral-900/50 px-4 py-3 text-sm text-neutral-300 transition-all duration-200 file:mr-4 file:cursor-pointer file:rounded-md file:border-0 file:bg-neutral-800 file:px-4 file:py-2 file:text-sm file:font-medium file:text-neutral-200 hover:border-neutral-700 hover:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-700 focus:ring-offset-2 focus:ring-offset-black"
+                  />
+                  {referenceAudio && (
+                    <div className="mt-2 flex items-center gap-2 rounded-md bg-neutral-900/80 px-3 py-2 text-xs">
+                      <Waves className="h-3 w-3 text-green-500" />
+                      <span className="text-neutral-400">{referenceAudio.name}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
