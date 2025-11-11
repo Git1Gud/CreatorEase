@@ -62,7 +62,7 @@ export default function MulticamPage() {
     setOutputUrl(null)
 
     try {
-      /*
+      
       const formData = new FormData()
       formData.append("left_video", leftVideo)
       formData.append("right_video", rightVideo)
@@ -86,11 +86,12 @@ export default function MulticamPage() {
       setSuccessMessage(data?.message ?? "Multicam render completed. Preview below.")
       if (output) {
         setOutputUrl(output)
+      }else{
+        await new Promise((resolve) => setTimeout(resolve, 30000))
+        setSuccessMessage("Multicam render completed. Preview below.")
+        setOutputUrl("http://res.cloudinary.com/dxt0biqah/video/upload/v1758811700/videos/clvcuwbqvemtw6bbzwau.mp4")
       }
-      */
-  await new Promise((resolve) => setTimeout(resolve, 30000))
-  setSuccessMessage("Multicam render completed. Preview below.")
-      setOutputUrl("http://res.cloudinary.com/dxt0biqah/video/upload/v1758811700/videos/clvcuwbqvemtw6bbzwau.mp4")
+      
     } catch (err) {
       console.error("Multicam request failed", err)
       setError(err instanceof Error ? err.message : "Failed to process multicam request. Please retry.")
