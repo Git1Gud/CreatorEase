@@ -79,7 +79,7 @@ const UploadPage= () => {
   
   return (
     <div className="upload-container">
-      <h2>Upload Video</h2>
+      <h2 className="gradient-text">Upload Video</h2>
       <div 
         className={`upload-area ${dragActive ? 'active' : ''}`}
         onDragEnter={handleDrag}
@@ -99,7 +99,7 @@ const UploadPage= () => {
         </label>
       </div>
       
-      <div className="collaboration-link">
+      <div className="collaboration-link animate-fadeIn">
         <p>Want to collaborate with others?</p>
         <button 
           className="btn-collaborate"

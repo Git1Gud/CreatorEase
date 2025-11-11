@@ -43,9 +43,9 @@ const CollaborationSetup = () => {
   if (!isConnected) {
     return (
       <div className="collaboration-setup-container">
-        <div className="collaboration-setup-card">
+        <div className="collaboration-setup-card animate-scaleIn">
           <div className="card-header">
-            <h2>Join Collaboration</h2>
+            <h2 className="shiny-text">Join Collaboration</h2>
             <p className="subtitle">Connect with your team to edit videos together</p>
           </div>
           
@@ -79,13 +79,13 @@ const CollaborationSetup = () => {
   if (isConnected && !roomData) {
     return (
       <div className="collaboration-setup-container">
-        <div className="collaboration-setup-card">
-          <div className="card-header">
+        <div className="collaboration-setup-card animate-scaleIn">
+          <div className="card-header animate-fadeIn">
             <div className="status-badge-connected">
               <span className="status-dot-pulse"></span>
               Connected
             </div>
-            <h2>Welcome, {userData?.name || 'User'}!</h2>
+            <h2 className="gradient-text">Welcome, {userData?.name || 'User'}!</h2>
             <p className="user-id">
               <span className="label">User ID:</span> 
               <span className="value">{userData?.userId}</span>
@@ -93,14 +93,14 @@ const CollaborationSetup = () => {
           </div>
           
           <div className="room-options">
-            <div className="options-divider">
+            <div className="options-divider animate-fadeIn animate-delay-100">
               <span className="divider-line"></span>
               <span className="divider-text">Choose an option</span>
               <span className="divider-line"></span>
             </div>
             
             <div className="room-cards">
-              <div className="room-card room-card-join">
+              <div className="room-card room-card-join animate-slideIn animate-delay-200">
                 <div className="room-card-header">
                   <h3>Join Existing Room</h3>
                   <p>Collaborate on an ongoing project</p>
@@ -121,7 +121,7 @@ const CollaborationSetup = () => {
                 </button>
               </div>
 
-              <div className="room-card room-card-create">
+              <div className="room-card room-card-create animate-slideIn animate-delay-300">
                 <div className="room-card-header">
                   <h3>Create New Room</h3>
                   <p>Start a fresh collaboration session</p>
@@ -138,7 +138,7 @@ const CollaborationSetup = () => {
 
           <button 
             onClick={() => navigate('/')} 
-            className="btn-back"
+            className="btn-back animate-fadeIn animate-delay-400"
           >
             ← Back to Upload
           </button>

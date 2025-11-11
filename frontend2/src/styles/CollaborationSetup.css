@@ -127,9 +127,23 @@
   border: 1px solid #1f1f1f;
   border-radius: 12px;
   padding: 20px;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.room-card::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(45deg, #404040, #262626, #404040);
+  opacity: 0;
+  z-index: -1;
+  transition: opacity 0.3s ease;
+  filter: blur(8px);
 }
 
 .room-card:hover {
@@ -137,6 +151,10 @@
   background: #0f0f0f;
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.room-card:hover::before {
+  opacity: 0.5;
 }
 
 .room-card-join {

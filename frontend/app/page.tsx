@@ -23,7 +23,7 @@ const features = [
   {
     title: "Video Editor",
     description: "Collaborate and edit video through text, detect silence and much more.",
-    href: "http://localhost:4173/edit",
+    href: "http://localhost:5173/collaborate",
     icon: Sparkles,
     cta: "Open Editor",
     target: "_blank",
@@ -33,55 +33,59 @@ const features = [
 
 export default function HomePage() {
   return (
-    <main className="container mx-auto px-4 py-16">
-      <section className="mb-16 text-center">
-        <span className="inline-flex items-center rounded-full border border-purple-500/50 bg-purple-500/10 px-3 py-1 text-xs uppercase tracking-wide text-purple-200">
-          Creator toolkit
-        </span>
-        <h1 className="mt-6 text-4xl font-bold sm:text-5xl lg:text-6xl">
-          Smart video tooling built for agile content teams
-        </h1>
-        <p className="mx-auto mt-4 max-w-2xl text-base text-gray-400 sm:text-lg">
-          Choose the workflow you need: automate highlight discovery, sync multicam edits, or preview the highest-performing
-          segments before you publish.
-        </p>
-        <div className="mt-10 flex justify-center gap-4">
-          <Button asChild size="lg" className="bg-purple-600 hover:bg-purple-700">
-            <Link href="/clipper" className="inline-flex items-center gap-2">
-              Try the clipper
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
-          <Button asChild size="lg" variant="outline" className="border-gray-700 text-gray-100 hover:bg-gray-900">
-            <Link href="/multicam">Launch multicam</Link>
-          </Button>
-        </div>
-      </section>
+    <main className="min-h-screen bg-black">
+      <div className="container mx-auto px-6 py-20">
+        <section className="mb-20 text-center">
+          <span className="animate-fadeIn inline-flex items-center rounded-full border border-neutral-800 bg-neutral-900 px-4 py-1.5 text-xs font-medium uppercase tracking-wider text-neutral-400">
+            Creator toolkit
+          </span>
+          <h1 className="animate-fadeInUp animate-delay-100 mt-8 text-5xl font-medium tracking-tight text-neutral-100 sm:text-6xl lg:text-7xl">
+            Smart video tooling built for
+            <br />
+            <span className="shiny-text">agile content teams</span>
+          </h1>
+          <p className="animate-fadeInUp animate-delay-200 mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-neutral-500">
+            Choose the workflow you need: automate highlight discovery, sync multicam edits, or preview the highest-performing
+            segments before you publish.
+          </p>
+          <div className="animate-fadeInUp animate-delay-300 mt-12 flex justify-center gap-4">
+            <Button asChild size="lg" className="bg-neutral-100 text-black hover:bg-neutral-200">
+              <Link href="/clipper" className="inline-flex items-center gap-2">
+                Try the clipper
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="border-neutral-800 text-neutral-300 hover:bg-neutral-900 hover:text-neutral-100">
+              <Link href="/multicam">Launch multicam</Link>
+            </Button>
+          </div>
+        </section>
 
-      <section className="grid gap-6 md:grid-cols-3">
-        {features.map(({ title, description, href, icon: Icon, cta, target, rel }) => (
-          <Card
-            key={title}
-            className="group border-gray-800 bg-gray-900/60 backdrop-blur transition-colors hover:border-purple-500/60"
-          >
-            <CardHeader>
-              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-purple-500/20 text-purple-300">
-                <Icon className="h-6 w-6" />
-              </div>
-              <CardTitle className="text-xl">{title}</CardTitle>
-              <CardDescription className="text-gray-400">{description}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild className="w-full bg-purple-600 hover:bg-purple-700">
-                <Link href={href} target={target} rel={rel} className="inline-flex items-center justify-center gap-2">
-                  {cta}
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </section>
+        <section className="grid gap-5 md:grid-cols-3">
+          {features.map(({ title, description, href, icon: Icon, cta, target, rel }, index) => (
+            <Card
+              key={title}
+              className={`animate-scaleIn animate-delay-${(index + 4) * 100} glow-hover group border-neutral-900 bg-neutral-950 transition-all hover:border-neutral-800 hover:bg-neutral-900`}
+            >
+              <CardHeader className="space-y-4">
+                <div className="animate-float inline-flex h-12 w-12 items-center justify-center rounded-lg bg-neutral-900 text-neutral-400 transition-colors group-hover:bg-neutral-800 group-hover:text-neutral-300">
+                  <Icon className="h-6 w-6" />
+                </div>
+                <CardTitle className="text-xl font-medium text-neutral-100">{title}</CardTitle>
+                <CardDescription className="text-sm leading-relaxed text-neutral-500">{description}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button asChild className="w-full bg-neutral-900 text-neutral-100 hover:bg-neutral-800">
+                  <Link href={href} target={target} rel={rel} className="inline-flex items-center justify-center gap-2">
+                    {cta}
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </section>
+      </div>
     </main>
   )
 }

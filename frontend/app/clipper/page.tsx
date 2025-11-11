@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Upload, Play, Loader2, AlertCircle } from "lucide-react"
+import { Upload, Play, Loader2, AlertCircle, Clapperboard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -90,93 +90,98 @@ export default function ClipperPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <header className="mb-8 text-center">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">
-          Segment Clipper
-        </h1>
-        <p className="text-gray-400 mt-2">Upload your long-form video and generate highlight clips with captioned hooks.</p>
-      </header>
+    <div className="min-h-screen bg-black">
+      <div className="container mx-auto py-12 px-6">
+        <header className="animate-fadeIn mb-12 text-center">
+          <div className="animate-float mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-lg bg-neutral-900 text-neutral-400">
+            <Clapperboard className="h-7 w-7" />
+          </div>
+          <h1 className="text-4xl font-medium text-neutral-100">
+            <span className="gradient-text">Segment Clipper</span>
+          </h1>
+          <p className="text-neutral-500 mt-3 text-lg">Upload your long-form video and generate highlight clips with captioned hooks.</p>
+        </header>
 
-      {error && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+        {error && (
+          <Alert variant="destructive" className="animate-slideInLeft mb-8 border-red-900 bg-red-950/50">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-      <div className="grid gap-8 md:grid-cols-2">
-        <Card className="bg-gray-900 border-gray-800">
-          <CardContent className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Upload Video</h2>
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card className="animate-fadeInUp animate-delay-100 bg-neutral-950 border-neutral-900">
+            <CardContent className="p-8">
+              <h2 className="text-xl font-medium mb-6 text-neutral-100">Upload Video</h2>
 
-            <div
-              className="border-2 border-dashed border-gray-700 rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 transition-colors"
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onClick={() => document.getElementById("clipper-video-upload")?.click()}
-            >
-              <input
-                id="clipper-video-upload"
-                type="file"
-                accept="video/*"
-                className="hidden"
-                onChange={handleFileChange}
-              />
-              <Upload className="mx-auto h-12 w-12 text-gray-500 mb-4" />
-              <p className="text-gray-400 mb-2">Drag and drop your video here or click to browse</p>
-              <p className="text-xs text-gray-500">Supports MP4, MOV, AVI (max 1GB)</p>
-            </div>
-
-            {file && (
-              <div className="mt-4 text-left">
-                <p className="text-sm text-gray-400 truncate">Selected: {file.name}</p>
-                <p className="text-xs text-gray-500">{(file.size / (1024 * 1024)).toFixed(2)} MB</p>
+              <div
+                className="border-2 border-dashed border-neutral-800 rounded-xl p-12 text-center cursor-pointer hover:border-neutral-700 hover:bg-neutral-950 transition-all"
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onClick={() => document.getElementById("clipper-video-upload")?.click()}
+              >
+                <input
+                  id="clipper-video-upload"
+                  type="file"
+                  accept="video/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+                <Upload className="mx-auto h-12 w-12 text-neutral-700 mb-4" />
+                <p className="text-neutral-400 mb-2">Drag and drop your video here or click to browse</p>
+                <p className="text-xs text-neutral-600">Supports MP4, MOV, AVI (max 1GB)</p>
               </div>
-            )}
 
-            <Button
-              className="w-full mt-6 bg-blue-600 hover:bg-blue-700"
-              onClick={processVideo}
-              disabled={!file || isProcessing}
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                "Generate Clips"
+              {file && (
+                <div className="mt-6 p-4 bg-neutral-900 rounded-lg border border-neutral-800">
+                  <p className="text-sm text-neutral-300 truncate font-medium">{file.name}</p>
+                  <p className="text-xs text-neutral-600 mt-1">{(file.size / (1024 * 1024)).toFixed(2)} MB</p>
+                </div>
               )}
+
+              <Button
+                className="w-full mt-6 bg-neutral-100 text-black hover:bg-neutral-200"
+                onClick={processVideo}
+                disabled={!file || isProcessing}
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  "Generate Clips"
+                )}
             </Button>
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-900 border-gray-800">
-          <CardContent className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Preview</h2>
+        <Card className="bg-neutral-950 border-neutral-900">
+          <CardContent className="p-8">
+            <h2 className="text-xl font-medium mb-6 text-neutral-100">Preview</h2>
 
             {preview ? (
-              <div className="aspect-video bg-black rounded-lg overflow-hidden">
+              <div className="aspect-video bg-black rounded-xl overflow-hidden border border-neutral-900">
                 <video src={preview} controls className="w-full h-full" />
               </div>
             ) : (
-              <div className="aspect-video bg-gray-800 rounded-lg flex items-center justify-center">
-                <Play className="h-16 w-16 text-gray-700" />
+              <div className="aspect-video bg-neutral-900 rounded-xl flex items-center justify-center border border-neutral-800">
+                <Play className="h-16 w-16 text-neutral-800" />
               </div>
             )}
 
             {isProcessing && (
-              <div className="mt-6">
-                <div className="flex justify-between text-sm mb-2">
-                  <span>Processing video...</span>
-                  <span>{progress}%</span>
+              <div className="mt-8 p-6 bg-neutral-900 rounded-xl border border-neutral-800">
+                <div className="flex justify-between text-sm mb-3">
+                  <span className="text-neutral-400">Processing video...</span>
+                  <span className="text-neutral-300 font-medium">{progress}%</span>
                 </div>
-                <Progress value={progress} className="h-2 bg-gray-800" />
+                <Progress value={progress} className="h-2 bg-neutral-800" />
               </div>
             )}
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   )
