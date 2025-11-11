@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 const BASE_URL = 'http://localhost:8000';
 
 const UploadPage= () => {
-  const [dragActive, setDragActive] = useState<boolean>(false);
+  const [dragActive, setDragActive] = useState(false);
   const navigate = useNavigate();
   
   const handleDrag = (e) => {
@@ -97,6 +97,16 @@ const UploadPage= () => {
           />
           <span>Browse Files</span>
         </label>
+      </div>
+      
+      <div className="collaboration-link">
+        <p>Want to collaborate with others?</p>
+        <button 
+          className="btn-collaborate"
+          onClick={() => navigate('/collaborate')}
+        >
+          Join Collaboration
+        </button>
       </div>
     </div>
   );

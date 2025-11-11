@@ -44,10 +44,13 @@ const CollaborationSetup = () => {
     return (
       <div className="collaboration-setup-container">
         <div className="collaboration-setup-card">
-          <h2>Join Collaboration</h2>
-          <p className="subtitle">Enter your name to get started</p>
+          <div className="card-header">
+            <h2>Join Collaboration</h2>
+            <p className="subtitle">Connect with your team to edit videos together</p>
+          </div>
           
           <div className="form-group">
+            <label className="input-label">Your Name</label>
             <input
               type="text"
               placeholder="Enter your name"
@@ -57,16 +60,16 @@ const CollaborationSetup = () => {
               onKeyPress={(e) => e.key === 'Enter' && handleConnect()}
             />
             <button onClick={handleConnect} className="btn-primary">
-              Connect
+              <span className="btn-icon">→</span>
+              Connect to Server
             </button>
           </div>
 
           <button 
             onClick={() => navigate('/')} 
-            className="btn-secondary"
-            style={{ marginTop: '20px' }}
+            className="btn-back"
           >
-            Back to Upload
+            ← Back to Upload
           </button>
         </div>
       </div>
@@ -77,39 +80,67 @@ const CollaborationSetup = () => {
     return (
       <div className="collaboration-setup-container">
         <div className="collaboration-setup-card">
-          <h2>Welcome, {userData?.name || 'User'}</h2>
-          <p className="user-id">User ID: {userData?.userId}</p>
+          <div className="card-header">
+            <div className="status-badge-connected">
+              <span className="status-dot-pulse"></span>
+              Connected
+            </div>
+            <h2>Welcome, {userData?.name || 'User'}!</h2>
+            <p className="user-id">
+              <span className="label">User ID:</span> 
+              <span className="value">{userData?.userId}</span>
+            </p>
+          </div>
           
           <div className="room-options">
-            <h3>Join or Create Room</h3>
-            
-            <div className="form-group">
-              <input
-                type="text"
-                placeholder="Enter Room ID (optional)"
-                value={roomInput}
-                onChange={(e) => setRoomInput(e.target.value)}
-                className="collaboration-input"
-                onKeyPress={(e) => e.key === 'Enter' && handleJoinRoom()}
-              />
+            <div className="options-divider">
+              <span className="divider-line"></span>
+              <span className="divider-text">Choose an option</span>
+              <span className="divider-line"></span>
             </div>
+            
+            <div className="room-cards">
+              <div className="room-card room-card-join">
+                <div className="room-card-header">
+                  <h3>Join Existing Room</h3>
+                  <p>Collaborate on an ongoing project</p>
+                </div>
+                <div className="form-group">
+                  <label className="input-label">Room ID</label>
+                  <input
+                    type="text"
+                    placeholder="Enter Room ID"
+                    value={roomInput}
+                    onChange={(e) => setRoomInput(e.target.value)}
+                    className="collaboration-input"
+                    onKeyPress={(e) => e.key === 'Enter' && handleJoinRoom()}
+                  />
+                </div>
+                <button onClick={handleJoinRoom} className="btn-card btn-card-join">
+                  Join Room →
+                </button>
+              </div>
 
-            <div className="button-group">
-              <button onClick={handleJoinRoom} className="btn-primary">
-                Join Room
-              </button>
-              <button onClick={handleCreateRoom} className="btn-secondary">
-                Create New Room
-              </button>
+              <div className="room-card room-card-create">
+                <div className="room-card-header">
+                  <h3>Create New Room</h3>
+                  <p>Start a fresh collaboration session</p>
+                </div>
+                <div className="room-card-content">
+                  <p className="room-card-info">You'll be the room leader and can invite others to join</p>
+                </div>
+                <button onClick={handleCreateRoom} className="btn-card btn-card-create">
+                  Create Room →
+                </button>
+              </div>
             </div>
           </div>
 
           <button 
             onClick={() => navigate('/')} 
             className="btn-back"
-            style={{ marginTop: '20px' }}
           >
-            Back to Upload
+            ← Back to Upload
           </button>
         </div>
       </div>
