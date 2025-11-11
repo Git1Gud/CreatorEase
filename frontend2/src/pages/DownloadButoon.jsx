@@ -18,24 +18,22 @@ const VideoDownloadButton = () => {
   const streamedBlobUrlRef = useRef(null);
 
   const panelBaseStyle = {
-    padding: '24px',
-    border: '1px solid var(--panel-border)',
-    margin: '12px 0',
-    background: 'linear-gradient(155deg, rgba(15,23,42,0.94), rgba(17,24,39,0.9))',
-    borderRadius: '20px',
-    boxShadow: 'var(--shadow-soft)',
-    color: 'var(--text-primary)'
+    padding: '20px',
+    border: '1px solid #1f1f1f',
+    margin: '16px 40px',
+    background: '#0f0f0f',
+    borderRadius: '8px',
+    color: '#e5e5e5'
   };
 
   const progressContainerStyle = {
     width: '100%',
-    background: 'rgba(15, 23, 42, 0.6)',
-    borderRadius: '14px',
-    height: '26px',
+    background: '#0a0a0a',
+    borderRadius: '6px',
+    height: '24px',
     position: 'relative',
     overflow: 'hidden',
-    border: '1px solid rgba(148, 163, 184, 0.28)',
-    boxShadow: 'inset 0 0 18px rgba(8, 15, 35, 0.6)'
+    border: '1px solid #1f1f1f'
   };
 
   const progressLabelStyle = {
@@ -43,36 +41,34 @@ const VideoDownloadButton = () => {
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    color: 'var(--text-primary)',
+    color: '#e5e5e5',
     fontWeight: 600,
     fontSize: '12px',
     letterSpacing: '0.05em'
   };
 
   const primaryButtonStyle = {
-    background: 'linear-gradient(145deg, rgba(99,102,241,0.92), rgba(129,140,248,0.82))',
-    color: 'var(--text-primary)',
-    padding: '12px 26px',
-    border: '1px solid transparent',
-    borderRadius: '14px',
+    background: '#1a1a1a',
+    color: '#e5e5e5',
+    padding: '10px 20px',
+    border: '1px solid #333333',
+    borderRadius: '6px',
     cursor: 'pointer',
-    fontSize: '16px',
-    fontWeight: 600,
-    boxShadow: '0 16px 32px rgba(99, 102, 241, 0.28)',
-    transition: 'transform var(--transition-base), box-shadow var(--transition-base)'
+    fontSize: '14px',
+    fontWeight: 500,
+    transition: 'all 0.2s ease'
   };
 
   const secondaryButtonStyle = {
-    background: 'rgba(100, 116, 139, 0.25)',
-    color: 'var(--text-primary)',
-    padding: '12px 26px',
-    border: '1px solid rgba(148, 163, 184, 0.4)',
-    borderRadius: '14px',
+    background: '#0f0f0f',
+    color: '#a3a3a3',
+    padding: '10px 20px',
+    border: '1px solid #2a2a2a',
+    borderRadius: '6px',
     cursor: 'pointer',
-    fontSize: '16px',
-    fontWeight: 600,
-    transition: 'transform var(--transition-base), box-shadow var(--transition-base)',
-    boxShadow: '0 12px 24px rgba(15, 23, 42, 0.35)'
+    fontSize: '14px',
+    fontWeight: 500,
+    transition: 'all 0.2s ease'
   };
 
   console.log('VideoDownloadButton component rendering...');
@@ -307,22 +303,22 @@ const VideoDownloadButton = () => {
     const progressFillStyle = {
       height: '100%',
       width: `${Math.max(0, Math.min(100, progress))}%`,
-      background: 'linear-gradient(90deg, rgba(99,102,241,0.9), rgba(14,165,233,0.85))',
-      borderRadius: '12px',
+      background: '#2a2a2a',
+      borderRadius: '6px',
       transition: 'width 0.35s ease'
     };
 
     return (
       <div className="download-section" style={panelBaseStyle}>
-        <h3 style={{ marginTop: 0, color: 'var(--text-secondary)' }}>🎬 Processing Video...</h3>
-        <div style={{ marginBottom: '16px' }}>
+        <h3 style={{ marginTop: 0, color: '#cccccc', fontSize: '14px', fontWeight: 500 }}>🎬 Processing Video...</h3>
+        <div style={{ marginBottom: '14px' }}>
           <div style={progressContainerStyle}>
             <div style={progressFillStyle} />
             <div style={progressLabelStyle}>{Math.round(progress)}%</div>
           </div>
         </div>
-        <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: '18px' }}>{message}</p>
-        <div style={{ textAlign: 'center', marginTop: '10px', color: 'var(--accent-secondary)', letterSpacing: '0.08em' }}>
+        <p style={{ color: '#737373', fontStyle: 'italic', marginBottom: '14px', fontSize: '13px' }}>{message}</p>
+        <div style={{ textAlign: 'center', marginTop: '10px', color: '#a3a3a3', letterSpacing: '0.05em', fontSize: '13px' }}>
           ⚙️ Processing...
         </div>
       </div>
@@ -332,38 +328,45 @@ const VideoDownloadButton = () => {
   if (downloadUrl) {
     const successPanelStyle = {
       ...panelBaseStyle,
-      border: '1px solid rgba(34, 197, 94, 0.32)',
-      background: 'linear-gradient(160deg, rgba(15,23,42,0.94), rgba(13,148,136,0.22))',
-      boxShadow: '0 20px 40px rgba(13, 148, 136, 0.25)'
+      border: '1px solid #2a4a2a',
+      background: '#0f1a0f'
     };
 
     return (
       <div className="download-section" style={successPanelStyle}>
-        <h3 style={{ marginTop: 0, color: 'var(--text-secondary)' }}>✅ Video Ready!</h3>
-        <p style={{ color: 'var(--success)', marginBottom: '18px', fontWeight: 500 }}>
+        <h3 style={{ marginTop: 0, color: '#cccccc', fontSize: '14px', fontWeight: 500 }}>✅ Video Ready!</h3>
+        <p style={{ color: '#51cf66', marginBottom: '14px', fontWeight: 500, fontSize: '13px' }}>
           {autoDownloaded ? '📥 Download started automatically!' : message}
         </p>
 
         {streamInfo && (
-          <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.6 }}>
-            <div><strong style={{ color: 'var(--text-secondary)' }}>File:</strong> {streamInfo.fileName}</div>
+          <div style={{ fontSize: '12px', color: '#737373', marginBottom: '12px', lineHeight: 1.6 }}>
+            <div><strong style={{ color: '#a3a3a3' }}>File:</strong> {streamInfo.fileName}</div>
             {typeof streamInfo.size === 'number' && streamInfo.size > 0 && (
-              <div><strong style={{ color: 'var(--text-secondary)' }}>Size:</strong> {(streamInfo.size / (1024 * 1024)).toFixed(2)} MB</div>
+              <div><strong style={{ color: '#a3a3a3' }}>Size:</strong> {(streamInfo.size / (1024 * 1024)).toFixed(2)} MB</div>
             )}
-            <div><strong style={{ color: 'var(--text-secondary)' }}>Type:</strong> {streamInfo.mimeType}</div>
+            <div><strong style={{ color: '#a3a3a3' }}>Type:</strong> {streamInfo.mimeType}</div>
           </div>
         )}
 
         {autoDownloaded && (
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+          <p style={{ fontSize: '12px', color: '#737373', marginBottom: '12px' }}>
             If the download didn't start, click the button below:
           </p>
         )}
 
-        <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
           <button 
             onClick={handleManualDownload}
             style={{ ...primaryButtonStyle }}
+            onMouseEnter={(e) => {
+              e.target.style.background = '#262626';
+              e.target.style.borderColor = '#404040';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = '#1a1a1a';
+              e.target.style.borderColor = '#333333';
+            }}
           >
             📥 Download Video
           </button>
@@ -376,6 +379,14 @@ const VideoDownloadButton = () => {
               setProgress(0);
             }}
             style={{ ...secondaryButtonStyle }}
+            onMouseEnter={(e) => {
+              e.target.style.background = '#1a1a1a';
+              e.target.style.borderColor = '#333333';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = '#0f0f0f';
+              e.target.style.borderColor = '#2a2a2a';
+            }}
           >
             🗑️ Clear
           </button>
@@ -386,22 +397,22 @@ const VideoDownloadButton = () => {
 
   return (
     <div className="download-section" style={panelBaseStyle}>
-      <h3 style={{ marginTop: 0, color: 'var(--text-secondary)' }}>🎥 Download Processed Video</h3>
-      <div style={{ marginBottom: '18px', lineHeight: 1.6 }}>
-        <p style={{ margin: '6px 0', color: 'var(--text-primary)' }}>
-          <strong style={{ color: 'var(--text-secondary)' }}>Video:</strong> {videoFile?.name || 'No video loaded'}
+      <h3 style={{ marginTop: 0, color: '#cccccc', fontSize: '14px', fontWeight: 500 }}>🎥 Download Processed Video</h3>
+      <div style={{ marginBottom: '14px', lineHeight: 1.6 }}>
+        <p style={{ margin: '6px 0', color: '#e5e5e5', fontSize: '13px' }}>
+          <strong style={{ color: '#a3a3a3' }}>Video:</strong> {videoFile?.name || 'No video loaded'}
         </p>
-        <p style={{ margin: '6px 0', color: 'var(--text-primary)' }}>
-          <strong style={{ color: 'var(--text-secondary)' }}>Trims:</strong> {trimHistory?.length || 0} sections
+        <p style={{ margin: '6px 0', color: '#e5e5e5', fontSize: '13px' }}>
+          <strong style={{ color: '#a3a3a3' }}>Trims:</strong> {trimHistory?.length || 0} sections
           {trimHistory?.length > 0 && ' (will be removed from final video)'}
         </p>
-        <p style={{ margin: '6px 0', fontSize: '12px', color: 'var(--text-muted)' }}>
-          <strong style={{ color: 'var(--text-secondary)' }}>Debug:</strong> Socket: {socketService.socket ? '✅' : '❌'} | 
+        <p style={{ margin: '6px 0', fontSize: '11px', color: '#737373' }}>
+          <strong style={{ color: '#8a8a8a' }}>Debug:</strong> Socket: {socketService.socket ? '✅' : '❌'} | 
           User: {socketService.userData ? '✅' : '❌'}
         </p>
         {streamInfo && (
-          <p style={{ margin: '6px 0', fontSize: '12px', color: 'var(--text-muted)' }}>
-            <strong style={{ color: 'var(--text-secondary)' }}>Last stream:</strong> {streamInfo.fileName}
+          <p style={{ margin: '6px 0', fontSize: '11px', color: '#737373' }}>
+            <strong style={{ color: '#8a8a8a' }}>Last stream:</strong> {streamInfo.fileName}
           </p>
         )}
       </div>
@@ -415,11 +426,23 @@ const VideoDownloadButton = () => {
           opacity: videoFile?.url ? 1 : 0.4,
           cursor: videoFile?.url ? 'pointer' : 'not-allowed'
         }}
+        onMouseEnter={(e) => {
+          if (videoFile?.url) {
+            e.target.style.background = '#262626';
+            e.target.style.borderColor = '#404040';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (videoFile?.url) {
+            e.target.style.background = '#1a1a1a';
+            e.target.style.borderColor = '#333333';
+          }
+        }}
       >
         {videoFile?.url ? '🚀 Process & Download Video' : '❌ No Video Loaded'}
       </button>
       
-      {message && <p style={{ color: 'var(--danger)', marginTop: '12px', textAlign: 'center' }}>{message}</p>}
+      {message && <p style={{ color: '#ff6b6b', marginTop: '12px', textAlign: 'center', fontSize: '13px' }}>{message}</p>}
     </div>
   );
 };

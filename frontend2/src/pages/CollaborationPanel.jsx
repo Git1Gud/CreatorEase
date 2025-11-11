@@ -42,7 +42,6 @@ const CollaborationPanel = () => {
             placeholder="Enter your name"
             value={userName}
             onChange={(e) => setUserName(e.target.value)}
-            style={{ marginRight: '10px', padding: '5px' }}
           />
           <button onClick={handleConnect}>Connect</button>
         </div>
@@ -56,7 +55,7 @@ const CollaborationPanel = () => {
         <h3>Welcome, {userData?.name || 'User'}</h3>
         <p>User ID: {userData?.userId}</p>
         
-        <div style={{ marginTop: '20px' }}>
+        <div style={{ marginTop: '12px' }}>
           <h4>Join or Create Room</h4>
           <div>
             <input
@@ -64,9 +63,8 @@ const CollaborationPanel = () => {
               placeholder="Enter Room ID (optional)"
               value={roomInput}
               onChange={(e) => setRoomInput(e.target.value)}
-              style={{ marginRight: '10px', padding: '5px' }}
             />
-            <button onClick={handleJoinRoom} style={{ marginRight: '10px' }}>
+            <button onClick={handleJoinRoom}>
               Join Room
             </button>
             <button onClick={handleCreateRoom}>
@@ -91,15 +89,9 @@ const CollaborationPanel = () => {
         onClick={disconnect}
         style={{ 
           marginTop: '10px', 
-          background: 'linear-gradient(145deg, rgba(248,113,113,0.9), rgba(244,63,94,0.78))', 
-          color: 'var(--text-primary)',
-          padding: '8px 16px',
-          border: '1px solid rgba(248, 113, 113, 0.38)',
-          borderRadius: '12px',
-          cursor: 'pointer',
-          boxShadow: '0 14px 28px rgba(248, 113, 113, 0.28)',
-          fontWeight: 600,
-          letterSpacing: '0.02em'
+          background: '#2a1a1a', 
+          color: '#ff6b6b',
+          borderColor: '#4a2a2a'
         }}
       >
         Disconnect

@@ -208,7 +208,23 @@ const TranscriptionPanel = () => {
   
   return (
     <div className="transcription-panel">
-      <h3>Transcription</h3>
+      <div className="transcription-header">
+        <h3>Transcription</h3>
+        <div className="summary-color-guide">
+          <span className="summary-badge">
+            <span className="summary-pill summary-pill--current">Current</span>
+          </span>
+          <span className="summary-badge">
+            <span className="summary-pill summary-pill--selected">Selected</span>
+          </span>
+          <span className="summary-badge">
+            <span className="summary-pill summary-pill--region">Region</span>
+          </span>
+          <span className="summary-badge">
+            <span className="summary-pill summary-pill--trimmed">Trimmed</span>
+          </span>
+        </div>
+      </div>
       
       {/* Controls */}
       <div className="transcription-controls">
@@ -244,17 +260,13 @@ const TranscriptionPanel = () => {
         
         <div className="transcription-controls__hints">
           <p className="transcription-controls__hint">
-            <strong>Single click word:</strong> Create region for that word |
-            <strong> Click sentence:</strong> Create region for entire sentence
+            <strong>Word:</strong> Create region | <strong>Sentence:</strong> Create region for entire sentence
           </p>
           {isSelecting && (
             <p className="transcription-controls__hint">
-              <strong>Selection Mode:</strong> Click words to select, then click "Create Region" to add them to waveform
+              💡 Click words to select, then "Create Region"
             </p>
           )}
-          <p className="transcription-controls__hint transcription-controls__hint--tip">
-            💡 After creating regions on waveform, you can adjust them and then add to trims as usual
-          </p>
         </div>
       </div>
 
@@ -327,31 +339,6 @@ const TranscriptionPanel = () => {
             </div>
           </div>
         ))}
-      </div>
-
-      {/* Summary */}
-      <div className="transcription-summary">
-        <p>
-          <strong>Color Guide:</strong>
-        </p>
-        <div className="summary-color-guide">
-          <span className="summary-badge">
-            <span className="summary-pill summary-pill--current">Current</span>
-            = Current word
-          </span>
-          <span className="summary-badge">
-            <span className="summary-pill summary-pill--selected">Selected</span>
-            = Selected
-          </span>
-          <span className="summary-badge">
-            <span className="summary-pill summary-pill--region">Region</span>
-            = In existing region
-          </span>
-          <span className="summary-badge">
-            <span className="summary-pill summary-pill--trimmed">Trimmed</span>
-            = Queued for trimming
-          </span>
-        </div>
       </div>
 
       {trimHistory.length > 0 && (

@@ -18,12 +18,11 @@ const App = () => {
         {/* <header className="App-header">
           <h1>Video Editor App</h1>
         </header> */}
-        <main>
+        
           <Routes>
             <Route path="/" element={<UploadPage />} />
             <Route path="/edit" element={<EditPage />} />
           </Routes>
-        </main>
       </div>
     </Router>
   );
