@@ -46,18 +46,20 @@ export function VideoEditorProvider({ children }) {
       socketService.setupUser(userData);
       
       // Listen for connection confirmation
-      socketService.socket.on('connected', (data) => {
-        setUserData(data);
-        setIsConnected(true);
-        console.log('User connected with data:', data);
-      });
+      if (socketService.socket) {
+        socketService.socket.on('connected', (data) => {
+          setUserData(data);
+          setIsConnected(true);
+          console.log('User connected with data:', data);
+        });
 
-      // Listen for room join confirmation
-      socketService.socket.on('room joined', (data) => {
-        setRoomData(data);
-        setIsLeader(data.isLeader);
-        console.log('Joined room:', data+" "+data.isLeader);
-      });
+        // Listen for room join confirmation
+        socketService.socket.on('room joined', (data) => {
+          setRoomData(data);
+          setIsLeader(data.isLeader);
+          console.log('Joined room:', data+" "+data.isLeader);
+        });
+      }
 
     } catch (error) {
       console.error('Failed to connect to socket:', error);
@@ -120,10 +122,12 @@ export function VideoEditorProvider({ children }) {
     } else {
       console.log('Trim validation failed - overlaps with existing trim');
       // Optionally send validation failed event
-      socketService.socket.emit('validation failed', { 
-        newTrim, 
-        reason: 'overlaps with existing trim' 
-      });
+      if (socketService.socket) {
+        socketService.socket.emit('validation failed', { 
+          newTrim, 
+          reason: 'overlaps with existing trim' 
+        });
+      }
     }
   };
 
@@ -167,12 +171,16 @@ export function VideoEditorProvider({ children }) {
   socketService.onUpdate(handleUpdate);
   
   // Add validation failed handler
-  socketService.socket.on('validation failed', handleValidationFailed);
+  if (socketService.socket) {
+    socketService.socket.on('validation failed', handleValidationFailed);
+  }
 
   return () => {
     socketService.offValidate();
     socketService.offUpdate();
-    socketService.socket.off('validation failed');
+    if (socketService.socket) {
+      socketService.socket.off('validation failed');
+    }
   };
 }, [isConnected, isLeader, trimHistory, userData]);
 

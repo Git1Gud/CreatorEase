@@ -228,46 +228,37 @@ const TranscriptionPanel = () => {
       
       {/* Controls */}
       <div className="transcription-controls">
-        <div className="transcription-controls__actions">
-          <button
-            type="button"
-            onClick={() => setIsSelecting(!isSelecting)}
-            className={`control-button ${isSelecting ? 'control-button--danger' : 'control-button--accent'}`}
-          >
-            {isSelecting ? 'Cancel Selection' : 'Select Multiple Words'}
-          </button>
-          
-          {isSelecting && selectedWords.size > 0 && (
-            <>
-              <button
-                type="button"
-                onClick={processSelectedWords}
-                className="control-button control-button--success"
-              >
-                Create Region from {selectedWords.size} Selected Word{selectedWords.size > 1 ? 's' : ''}
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => setSelectedWords(new Set())}
-                className="control-button control-button--warning"
-              >
-                Clear Selection
-              </button>
-            </>
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={() => setIsSelecting(!isSelecting)}
+          className={`control-button ${isSelecting ? 'control-button--danger' : 'control-button--accent'}`}
+        >
+          {isSelecting ? '✕ Cancel' : '☰ Multi-Select'}
+        </button>
         
-        <div className="transcription-controls__hints">
-          <p className="transcription-controls__hint">
-            <strong>Word:</strong> Create region | <strong>Sentence:</strong> Create region for entire sentence
-          </p>
-          {isSelecting && (
-            <p className="transcription-controls__hint">
-              💡 Click words to select, then "Create Region"
-            </p>
-          )}
-        </div>
+        {isSelecting && selectedWords.size > 0 && (
+          <>
+            <button
+              type="button"
+              onClick={processSelectedWords}
+              className="control-button control-button--success"
+            >
+              ✓ Create ({selectedWords.size})
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => setSelectedWords(new Set())}
+              className="control-button control-button--warning"
+            >
+              Clear
+            </button>
+          </>
+        )}
+        
+        <span className="transcription-hint">
+          {isSelecting ? '💡 Select words, then create' : 'Click word/sentence to create region'}
+        </span>
       </div>
 
       {/* Transcription Content */}
@@ -277,18 +268,12 @@ const TranscriptionPanel = () => {
             {/* Segment timestamp and sentence-level controls */}
             <div
               className="segment-meta"
-            onClick={() => handleSentenceClick(segment)}
+              onClick={() => handleSentenceClick(segment)}
+              title="Click to create region for entire sentence"
             >
               <span className="segment-timestamp">
                 {Math.floor(segment.start / 60)}:{(segment.start % 60).toFixed(1).padStart(4, '0')} - {Math.floor(segment.end / 60)}:{(segment.end % 60).toFixed(1).padStart(4, '0')}
               </span>
-              <button
-                type="button"
-                className="segment-action-button"
-                title="Click to create a region for this entire sentence"
-              >
-                Create Region
-              </button>
             </div>
 
             {/* Word-level display */}

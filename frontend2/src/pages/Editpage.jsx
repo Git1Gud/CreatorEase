@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { VideoEditorProvider, useVideoEditor } from '../context/VideoEditorContext';
+import { useVideoEditor } from '../context/VideoEditorContext';
 import TranscriptionPanel from '../components/TranscriptionPanel';
 import VideoPanel from '../components/VideoPanel';
 import PlaybackControls from '../components/PlaybackControls';
@@ -22,10 +22,18 @@ const EditPageContent = () => {
       videoFile,
       trimHistory,
       setVideoFile,
-      setTranscription 
+      setTranscription,
+      roomData // Add roomData to check if user is in a room
       // We need a way to signal readiness from context or manage locally
       // For now, managing a local state triggered by wavesurfer events
     } = useVideoEditor();
+
+  // Redirect to collaboration page if not in a room
+  useEffect(() => {
+    if (!roomData) {
+      navigate('/collaborate');
+    }
+  }, [roomData, navigate]);
 
 
     const [skipState, setSkipState] = useState({ 
@@ -212,17 +220,15 @@ const handleTimeUpdate = useCallback(() => {
   return (
     <div className="edit-container">
       <div className="header-section">
-        <h2>Edit Video: {videoFile.name}</h2>
-        <button 
-          className="back-button" 
-          onClick={() => navigate('/')}
-        >
-          Back to Upload
-        </button>
-      </div>
-      
-      {/* Add CollaborationPanel here */}
-      <div className="collaboration-section">
+        <div className="header-left">
+          <h2>Edit Video: {videoFile.name}</h2>
+          <button 
+            className="back-button" 
+            onClick={() => navigate('/')}
+          >
+            Back to Upload
+          </button>
+        </div>
         <CollaborationPanel />
       </div>
       
@@ -240,12 +246,4 @@ const handleTimeUpdate = useCallback(() => {
   );
 }
 
-const EditPage = () => {
-  return (
-    <VideoEditorProvider>
-      <EditPageContent />
-    </VideoEditorProvider>
-  );
-}
-
-export default EditPage;
+export default EditPageContent;

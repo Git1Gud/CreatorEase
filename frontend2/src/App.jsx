@@ -9,21 +9,26 @@ import './styles/UploadPage.css';
 import './styles/TranscriptionPanel.css';
 import UploadPage from './pages/UploadPage';
 import EditPage from './pages/Editpage';
+import CollaborationSetup from './pages/CollaborationSetup';
+import { VideoEditorProvider } from './context/VideoEditorContext';
 // import EditPage from './pages/EditPage';
 
 const App = () => {
   return (
     <Router>
-      <div className="App">
-        {/* <header className="App-header">
-          <h1>Video Editor App</h1>
-        </header> */}
-        
-          <Routes>
-            <Route path="/" element={<UploadPage />} />
-            <Route path="/edit" element={<EditPage />} />
-          </Routes>
-      </div>
+      <VideoEditorProvider>
+        <div className="App">
+          {/* <header className="App-header">
+            <h1>Video Editor App</h1>
+          </header> */}
+          
+            <Routes>
+              <Route path="/" element={<UploadPage />} />
+              <Route path="/edit" element={<EditPage />} />
+              <Route path="/collaborate" element={<CollaborationSetup />} />
+            </Routes>
+        </div>
+      </VideoEditorProvider>
     </Router>
   );
 }
