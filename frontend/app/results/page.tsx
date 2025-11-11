@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { ArrowLeft, Download, Maximize, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import GradientText from "@/components/ui/GradientText"
 
 export default function ResultsPage() {
   const router = useRouter()
@@ -86,7 +87,9 @@ export default function ResultsPage() {
               <Sparkles className="h-7 w-7" />
             </div>
             <h1 className="mt-6 text-4xl font-medium text-neutral-100">
-              <span className="gradient-text">Your Generated Clips</span>
+              <GradientText colors={['#ffffff', '#a3a3a3', '#ffffff']} animationSpeed={4}>
+                Your Generated Clips
+              </GradientText>
             </h1>
             <p className="mt-3 text-lg text-neutral-500">
               Top-performing segments ready to download

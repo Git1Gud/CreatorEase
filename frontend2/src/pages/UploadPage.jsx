@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import GradientText from '../components/GradientText';
 
 const BASE_URL = 'http://localhost:8000';
 
@@ -79,7 +80,9 @@ const UploadPage= () => {
   
   return (
     <div className="upload-container">
-      <h2 className="gradient-text">Upload Video</h2>
+      <GradientText colors={['#ffffff', '#a3a3a3', '#ffffff']} animationSpeed={4}>
+        Upload Video
+      </GradientText>
       <div 
         className={`upload-area ${dragActive ? 'active' : ''}`}
         onDragEnter={handleDrag}

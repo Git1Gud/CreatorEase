@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVideoEditor } from '../context/VideoEditorContext';
 import '../styles/CollaborationSetup.css';
+import ShinyText from '../components/ShinyText';
+import GradientText from '../components/GradientText';
 
 const CollaborationSetup = () => {
   const navigate = useNavigate();
@@ -45,7 +47,7 @@ const CollaborationSetup = () => {
       <div className="collaboration-setup-container">
         <div className="collaboration-setup-card animate-scaleIn">
           <div className="card-header">
-            <h2 className="shiny-text">Join Collaboration</h2>
+            <ShinyText text="Join Collaboration" speed={3} />
             <p className="subtitle">Connect with your team to edit videos together</p>
           </div>
           
@@ -85,7 +87,9 @@ const CollaborationSetup = () => {
               <span className="status-dot-pulse"></span>
               Connected
             </div>
-            <h2 className="gradient-text">Welcome, {userData?.name || 'User'}!</h2>
+            <GradientText colors={['#ffffff', '#a3a3a3', '#ffffff']} animationSpeed={4}>
+              Welcome, {userData?.name || 'User'}!
+            </GradientText>
             <p className="user-id">
               <span className="label">User ID:</span> 
               <span className="value">{userData?.userId}</span>

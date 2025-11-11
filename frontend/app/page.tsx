@@ -4,6 +4,8 @@ import Link from "next/link"
 import { Video, Clapperboard, Sparkles, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import ShinyText from "@/components/ui/ShinyText"
+import GradientText from "@/components/ui/GradientText"
 
 const features = [
   {
@@ -42,7 +44,7 @@ export default function HomePage() {
           <h1 className="animate-fadeInUp animate-delay-100 mt-8 text-5xl font-medium tracking-tight text-neutral-100 sm:text-6xl lg:text-7xl">
             Smart video tooling built for
             <br />
-            <span className="shiny-text">agile content teams</span>
+            <ShinyText text="agile content teams" speed={3} className="text-5xl sm:text-6xl lg:text-7xl" />
           </h1>
           <p className="animate-fadeInUp animate-delay-200 mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-neutral-500">
             Choose the workflow you need: automate highlight discovery, sync multicam edits, or preview the highest-performing

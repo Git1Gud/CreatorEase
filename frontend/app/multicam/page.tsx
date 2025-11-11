@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import ShinyText from "@/components/ui/ShinyText"
 
 export default function MulticamPage() {
   const [leftVideo, setLeftVideo] = useState<File | null>(null)
@@ -108,7 +109,7 @@ export default function MulticamPage() {
             <Video className="h-7 w-7" />
           </div>
           <h1 className="mt-6 text-4xl font-medium text-neutral-100">
-            <span className="shiny-text">Multicam Slide Builder</span>
+            <ShinyText text="Multicam Slide Builder" speed={3} className="text-4xl" />
           </h1>
           <p className="mt-3 text-lg text-neutral-500">
             Upload two angles plus clean audio—CreatorEase will auto-sync, stitch with slide transitions, and overlay subtitles.

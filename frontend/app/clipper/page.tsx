@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import GradientText from "@/components/ui/GradientText"
 
 export default function ClipperPage() {
   const router = useRouter()
@@ -97,7 +98,9 @@ export default function ClipperPage() {
             <Clapperboard className="h-7 w-7" />
           </div>
           <h1 className="text-4xl font-medium text-neutral-100">
-            <span className="gradient-text">Segment Clipper</span>
+            <GradientText colors={['#ffffff', '#a3a3a3', '#ffffff']} animationSpeed={4}>
+              Segment Clipper
+            </GradientText>
           </h1>
           <p className="text-neutral-500 mt-3 text-lg">Upload your long-form video and generate highlight clips with captioned hooks.</p>
         </header>
